@@ -97,16 +97,42 @@
 
 ---
 
-## 段階5: Phase 0 の受け入れ基準をすべて確認しフェーズ表を完了に更新する
+## 段階5: Phase 0 の受け入れ基準をすべて確認しフェーズ表を完了に更新する ✅
 
-- [ ] requirements.md の Req1〜Req4 の受け入れ基準をすべて確認する
-- [ ] `DATABASE_URL` を空にして、原因の分かるエラーが出ることを確認する（実装は段階2で済み）
-- [ ] `git status` に `.env` が出てこないことを確認する
-- [ ] `npm run build` `npm run lint` `npm run test` をもう一度通す
-- [ ] `.kiro/README.md` の実装フェーズ表で foundation を「完了」に更新する
+- [x] requirements.md の Req1〜Req4 の受け入れ基準をすべて確認する（12項目）
+- [x] `DATABASE_URL` を空にして、原因の分かるエラーが出ることを確認する（実装は段階2で済み）
+- [x] `git status` に `.env` が出てこないことを確認する
+- [x] `npm run format` `lint` `tsc` `test` `build` をもう一度通す
+- [x] `.kiro/README.md` の実装フェーズ表で foundation を「完了」に更新する
 - [ ] ユーザーに報告し、許可を得てから push する
 
-**受け入れ基準**: Req1〜Req4 がすべて満たされ、フェーズ表が更新されている
+**受け入れ基準**: ✅ Req1〜Req4 の12項目すべてを実測で確認、フェーズ表を更新済み
+
+### 実施時の記録
+
+チェックを目視でなく**実際に動かして**確認した。
+
+| 確認項目                  | 方法                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| Tailwind が効いているか   | 開発サーバーから配信CSSを取得し、`.flex` などのユーティリティが生成済みか検査  |
+| Neon のテーブル           | `information_schema.tables` を問い合わせ、5テーブルの実在を確認                |
+| lint がエラーを検出するか | 未使用変数のあるファイルを一時的に置いて実行                                   |
+| DATABASE_URL 未設定時     | dotenv を読まずに `lib/prisma.ts` を import し、日本語のエラーが出ることを確認 |
+| `.env.example` の網羅性   | `.env` と変数名を `diff` で突き合わせ                                          |
+
+### ⚠️ 見つかった問題: `npm run lint` は warning では失敗しない
+
+未使用変数を置いて `npm run lint` を実行したところ、**検出はされたが warning 扱いで終了コードは0**だった。
+
+```
+2:9  warning  'unused' is assigned a value but never used  @typescript-eslint/no-unused-vars
+✖ 1 problem (0 errors, 1 warning)
+→ 終了コード 0
+```
+
+CLAUDE.md の「段階終了前の検証」は「すべて終了コード0」を条件にしているため、**この状態では lint が実質的にゲートとして機能しない**（ハードエラー以外は素通りする）。
+
+対応案: `package.json` の lint スクリプトを `eslint --max-warnings 0` にして warning も失敗扱いにする。ただし厳しさが変わるためユーザーの判断を仰ぐ。**Phase 1 に入る前に決める。**
 
 > 旧「段階4: 環境変数の検証」は、実装が段階2（`lib/prisma.ts`）で完了したためこの段階に統合した。
 
@@ -116,5 +142,5 @@
 
 Phase 0 にはビジネスロジックがないため、本格的なテストは書かない。
 
-- [ ] Vitest が動くことを示すサンプルテスト1本のみ
+- [x] Vitest が動くことを示すテストのみ（結果的に2本）
 - 実質的なテストは Phase 1 以降、Service 層ができてから書く

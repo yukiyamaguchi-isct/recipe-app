@@ -16,9 +16,9 @@
 
 **受け入れ基準**
 
-- [ ] `npm run dev` 実行後、`http://localhost:3000` にアクセスして画面が表示される
-- [ ] `npm run build` が成功する
-- [ ] Tailwind のユーティリティクラスを書いたら見た目が変わることを目視で確認できる
+- [x] `npm run dev` 実行後、`http://localhost:3000` にアクセスして画面が表示される
+- [x] `npm run build` が成功する
+- [x] Tailwind のユーティリティクラスを書いたら見た目が変わることを目視で確認できる
 
 ### Req2: Neon に接続でき、マイグレーションが実行できる
 
@@ -28,9 +28,9 @@
 
 **受け入れ基準**
 
-- [ ] `npx prisma migrate dev` が成功し、Neon 上にテーブルが作成される
-- [ ] `npx prisma studio` でテーブルの中身を確認できる
-- [ ] Neon のコンソール上でもテーブルが見える
+- [x] `npx prisma migrate dev` が成功し、Neon 上にテーブルが作成される
+- [x] `npx prisma studio` でテーブルの中身を確認できる
+- [x] Neon のコンソール上でもテーブルが見える
 
 ### Req3: 開発ツールが動く
 
@@ -39,9 +39,9 @@
 
 **受け入れ基準**
 
-- [ ] `npm run lint` が実行でき、意図的なエラーを検出する
-- [ ] `npm run format` でコードが整形される
-- [ ] `npm run test` でサンプルテストが成功する
+- [x] `npm run lint` が実行でき、意図的なエラーを検出する
+- [x] `npm run format` でコードが整形される
+- [x] `npm run test` でサンプルテストが成功する
 
 ### Req4: 環境変数の枠組みがある
 
@@ -51,9 +51,9 @@
 
 **受け入れ基準**
 
-- [ ] `.env.example` に必要な変数がすべて列挙されている
-- [ ] `git status` に `.env` が出てこない
-- [ ] `DATABASE_URL` を空にすると、原因が分かるエラーメッセージが出る
+- [x] `.env.example` に必要な変数がすべて列挙されている
+- [x] `git status` に `.env` が出てこない
+- [x] `DATABASE_URL` を空にすると、原因が分かるエラーメッセージが出る
 
 ## 非機能要件
 
