@@ -43,3 +43,6 @@ next-env.d.ts
 
 # project
 /dist
+
+# prisma generated client（コミットしない。postinstall で再生成される）
+/generated

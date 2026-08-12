@@ -15,7 +15,8 @@
 - Runtime: Node.js 20+
 - API: **Next.js Route Handlers**（`app/api/`）— フロントと同一プロジェクト
 - Database: **Neon**（PostgreSQL, Free プラン）
-- ORM: Prisma
+- ORM: **Prisma 7**（+ ドライバアダプタ `@prisma/adapter-pg`）
+  - Prisma 7 は接続URLをスキーマに書けず、CLI用（`prisma.config.ts`）と実行時用（アダプタ）で指定箇所が分かれる。詳細は `.kiro/specs/foundation/design.md`
 - 認証: **Auth.js（NextAuth v5）+ Google provider**
 - 画像処理: sharp（サーバー側の正規化・EXIF回転）
 - 画像ストレージ: AWS S3（`@aws-sdk/client-s3`）

@@ -1,6 +1,6 @@
 # foundation（Phase 0）の実装タスク
 
-段階ごとにユーザーへ報告し、許可を得てからコミットする。
+段階ごとにユーザーへ報告し、許可を得てからコミットする。**段階が終わったらこのファイルのチェックを更新する。**
 
 ---
 
@@ -8,37 +8,53 @@
 
 コード作業の前に必要。手順は `SETUP.md` の「Phase 0」を参照。
 
-- [ ] Neon でプロジェクトを作成する
-- [ ] 接続文字列を2種類取得する（pooled 用と direct 用）
-- [ ] `.env` に `DATABASE_URL` と `DIRECT_URL` を設定する
+- [x] Neon でプロジェクトを作成する
+- [x] 接続文字列を2種類取得する（pooled 用と direct 用）
+- [x] `.env` に `DATABASE_URL` と `DIRECT_URL` を設定する
 
 ---
 
-## 段階1: Next.js 雛形の作成
+## 段階1: Next.js 雛形の作成 ✅
 
-- [ ] `create-next-app` で雛形を作る（TypeScript / Tailwind CSS / ESLint / App Router を有効化）
-- [ ] `npm run dev` で起動し、ブラウザで表示されることを確認する
-- [ ] `npm run build` が成功することを確認する
-- [ ] `lib/services/` `lib/repositories/` `lib/clients/` `app/api/` の空ディレクトリを作る
-- [ ] `.gitignore` に `.env` と `node_modules` が入っているか確認する
+- [x] `create-next-app` で雛形を作る（TypeScript / Tailwind CSS / ESLint / App Router を有効化）
+- [x] `npm run dev` で起動し、ブラウザで表示されることを確認する
+- [x] `npm run build` が成功することを確認する
+- [x] `lib/services/` `lib/repositories/` `lib/clients/` `app/api/` の空ディレクトリを作る
+- [x] `.gitignore` に `.env` と `node_modules` が入っているか確認する
 
-**受け入れ基準**: `http://localhost:3000` が表示され、`npm run build` が通る
+**受け入れ基準**: ✅ `http://localhost:3000` が HTTP 200、`npm run build` 成功
+
+### 実施時の記録
+
+- `create-next-app` は空でないディレクトリを拒否するため、一時ディレクトリに生成してから移動した
+- 入ったのは **Next.js 16.3.0**（設計時の想定は15）。破壊的変更を `.kiro/steering/architecture.md` に記録した
+- `package.json` の name が一時ディレクトリ名になるので `recipe-app` に修正した
+- `.gitignore` の `.env*` が `.env.example` まで無視していたため `!.env.example` の例外を追加した
 
 ---
 
-## 段階2: Prisma と Neon の接続
+## 段階2: Prisma と Neon の接続 ✅
 
-- [ ] Prisma を導入する（`prisma` / `@prisma/client`）
-- [ ] `.env` に `DATABASE_URL` と `DIRECT_URL` を設定する
-- [ ] `.env.example` を作る（値は空、コメントでフェーズを明記）
-- [ ] `prisma/schema.prisma` を design.md のとおり書く
-- [ ] `lib/prisma.ts` に PrismaClient のシングルトンを書く
-- [ ] `npx prisma migrate dev` を実行し、Neon 上にテーブルが作られることを確認する
-- [ ] `npx prisma studio` でテーブルが見えることを確認する
+- [x] Prisma を導入する（`prisma` / `@prisma/client`）
+- [x] `.env` に `DATABASE_URL` と `DIRECT_URL` を設定する
+- [x] `.env.example` を作る（値は空、コメントでフェーズを明記）
+- [x] `prisma/schema.prisma` を design.md のとおり書く
+- [x] `lib/prisma.ts` に PrismaClient のシングルトンを書く
+- [x] `npx prisma migrate dev` を実行し、Neon 上にテーブルが作られることを確認する
+- [x] コード経由でNeonに接続できることを確認する（`User=0件, Recipe=0件` を取得）
 
-**受け入れ基準**: マイグレーションが成功し、Neon のコンソールでもテーブルが確認できる
+**受け入れ基準**: ✅ マイグレーション成功、アプリコードからの接続も確認
 
-> `directUrl` の書式と Prisma のバージョン要件は公式ドキュメントで確認すること。記憶で書かない。
+### 実施時の記録
+
+入ったのは **Prisma 7.9.1** で、設計時に想定した v6 とは構成が大きく異なった。詳細は design.md の「Prisma 7 の構成」を参照。
+
+- `url` / `directUrl` は**スキーマに書けない**（P1012エラー）。CLI用は `prisma.config.ts`、実行時用はドライバアダプタと、**指定箇所が2つに分かれる**
+- ジェネレータは `prisma-client`（`prisma-client-js` は非推奨）で `output` が必須。import 元も生成先パスになる
+- ドライバアダプタは `@prisma/adapter-pg` を採用。`@prisma/adapter-neon` は実測で遅い場合に検討する
+- 接続時に `pg` から `sslmode` の将来変更に関する警告が出るが、現時点では動作に影響しない
+
+> **教訓**: ライブラリのメジャーバージョンは、記憶ではなく実際に入ったものを確認してから書く。
 
 ---
 

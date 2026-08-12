@@ -31,36 +31,90 @@ recipe-app/
 └── package.json
 ```
 
+## ⚠️ Prisma 7 の構成（v6 以前と大きく異なる）
+
+入ったのは **Prisma 7.9.1**。学習データの多くは v6 以前なので、**書く前に必ず確認すること**。
+
+| 項目 | v6 以前 | **Prisma 7** |
+|---|---|---|
+| ジェネレータ | `prisma-client-js` | **`prisma-client`**（旧版は非推奨） |
+| `output` | 不要（node_modules に自動生成） | **必須**。生成物は指定パスに出る |
+| import 元 | `@prisma/client` | **生成先のパス**（`@/generated/prisma/client`） |
+| 接続URL | スキーマの `datasource` に `url` / `directUrl` | **スキーマに書けない**（書くと P1012 エラー） |
+| マイグレーション用の接続 | `directUrl` | **`prisma.config.ts` の `datasource.url`** |
+| 実行時の接続 | `url` | **`PrismaClient` に渡すドライバアダプタ** |
+| `.env` の読み込み | 実行時に自動 | **手動**（`import "dotenv/config"`） |
+
+**接続の指定が2箇所に分かれる**のが最大の違い。役割が別なので、どちらか片方だけでは動かない。
+
+```
+prisma.config.ts  → datasource.url = DIRECT_URL   … CLI（migrate / studio）が使う
+lib/prisma.ts     → adapter(DATABASE_URL)          … アプリの実行時クエリが使う
+```
+
+## prisma.config.ts
+
+```ts
+import "dotenv/config";
+import { defineConfig, env } from "prisma/config";
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: { path: "prisma/migrations" },
+  datasource: {
+    // マイグレーションは直接接続を使う。プーラー経由ではDDLが正しく流れない
+    url: env("DIRECT_URL"),
+  },
+});
+```
+
 ## PrismaClient のシングルトン
 
-Next.js の開発サーバーはホットリロードのたびにモジュールを再評価するため、`new PrismaClient()` を素直に書くとコネクションが増え続ける。グローバルに1つだけ保持する形にする。
+Next.js の開発サーバーはホットリロードのたびにモジュールを再評価するため、`new PrismaClient()` を素直に書くとコネクションが増え続ける。グローバルに1つだけ保持する。
+
+あわせて、`DATABASE_URL` 未設定時に原因の分かるエラーを出す（Req4）。
 
 ```ts
 // lib/prisma.ts
-import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
+
+function createPrismaClient(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("環境変数 DATABASE_URL が設定されていません。…");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
+
+### ドライバアダプタの選定
+
+`@prisma/adapter-pg`（node-postgres）を採用した。Neon のプール接続は PgBouncer 互換の通常のTCPエンドポイントなので、これで動く。
+
+`@prisma/adapter-neon`（Neonのサーバーレスドライバ）という選択肢もあり、サーバーレスのコールドスタートでは有利とされる。ただし WebSocket 設定という概念が増えるため、MVPでは採らない。**実測で遅いと分かった場合に切り替えを検討する。**
+
+### 生成物の扱い
+
+`generated/` は `.gitignore` に入れ、コミットしない。`package.json` の `postinstall` に `prisma generate` を置いてあるので、`npm install` のたびに再生成される（Vercel のビルドでも同様）。
 
 ## Prisma スキーマ（初期）
 
 `REQUIREMENTS.md` 8章のデータモデルに基づく。Auth.js が要求するモデルは Phase 1 で追加するため、この段階では**アプリ固有のモデルのみ**を定義する。
 
 ```prisma
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")   // Neon プール接続（アプリから使う）
-  directUrl = env("DIRECT_URL")     // Neon 直接接続（migrate 用）
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
-generator client {
-  provider = "prisma-client-js"
+datasource db {
+  provider = "postgresql"
+  // url / directUrl は書けない（Prisma 7）。上記の2箇所で指定する
 }
 
 model User {

@@ -1,0 +1,65 @@
+// Prisma 7 では generator provider が `prisma-client`（`prisma-client-js` は非推奨）で、
+// `output` の指定が必須。生成物は node_modules ではなくこのパスに出る。
+// import は `@prisma/client` ではなく生成先から行う。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+// Prisma 7 では url / directUrl をスキーマに書けない。
+// マイグレーション用の接続は prisma.config.ts、実行時の接続は lib/prisma.ts のアダプタで指定する。
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  recipes   Recipe[]
+}
+
+model Recipe {
+  id          String       @id @default(cuid())
+  userId      String
+  title       String
+  imageUrl    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients Ingredient[]
+  steps       Step[]
+
+  @@index([userId])
+}
+
+model Ingredient {
+  id       String   @id @default(cuid())
+  recipeId String
+  name     String // 例: 玉ねぎ
+  amount   String? // 例: 200g。数値と単位に分けない（「少々」「適量」などがあるため）
+  category Category
+  order    Int
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+}
+
+model Step {
+  id       String @id @default(cuid())
+  recipeId String
+  order    Int
+  text     String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+}
+
+enum Category {
+  SEASONING // 調味料
+  VEGETABLE // 野菜
+  OTHER // その他
+}
