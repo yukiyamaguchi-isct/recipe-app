@@ -127,7 +127,7 @@
 
 詳細と選定理由は `.kiro/steering/tech-stack.md` を参照。
 
-- フロントエンド: Next.js 15（App Router）+ TypeScript + Tailwind CSS
+- フロントエンド: Next.js 16（App Router）+ TypeScript + Tailwind CSS
 - バックエンド: Next.js Route Handlers（別途Expressは立てない）
 - データベース: Neon（PostgreSQL, Freeプラン）+ Prisma
 - 認証: Auth.js（NextAuth v5）+ Google provider、session strategy は `jwt`

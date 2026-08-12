@@ -3,6 +3,31 @@
 > **ステータス: 確定（2026-08-13）**
 > 変更する場合はユーザーの合意を取ること。
 
+## ⚠️ Next.js 16 の破壊的変更
+
+導入されたのは **Next.js 16.3.0**（当初の想定は15）。学習データの多くは15以前なので、**書く前に必ず確認すること**。一次情報は `node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md`。
+
+| 変更 | 内容 |
+|---|---|
+| **リクエストAPIが非同期のみ** | `cookies()` `headers()` `draftMode()`、`layout.js` / `page.js` / `route.js` の `params`、`page.js` の `searchParams` は**すべて `await` が必要**。15にあった同期アクセスの互換は削除された |
+| **`middleware` → `proxy`** | ファイル名は `proxy.ts`、エクスポートする関数名も `proxy`。**edge ランタイムは非対応**（`proxy` は nodejs 固定）。設定フラグも `skipMiddlewareUrlNormalize` → `skipProxyUrlNormalize` に改名 |
+| **Turbopack が既定** | 明示的な有効化は不要 |
+| 型ヘルパー | `npx next typegen` で `PageProps<'/path'>` `LayoutProps` `RouteContext` が生成される。手書きの型定義より優先して使う |
+
+```ts
+// ❌ Next.js 15 までの書き方
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const id = params.id;
+}
+
+// ✅ Next.js 16
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+}
+```
+
+> **Phase 1 の注意**: Auth.js はルート保護に middleware を使う構成が一般的だが、Next.js 16 では `proxy` に改名され edge ランタイムも使えない。実装時に **Auth.js 側の Next.js 16 対応状況を公式ドキュメントで確認する**こと。
+
 ## レイヤ構成
 
 Next.js に一本化するため、バックエンドは Route Handler を入口とする3層で構成する。

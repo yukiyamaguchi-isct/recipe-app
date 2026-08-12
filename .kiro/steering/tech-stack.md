@@ -5,7 +5,7 @@
 
 ## Frontend
 
-- Framework: Next.js 15（App Router）+ TypeScript
+- Framework: Next.js 16（App Router）+ TypeScript
 - UI: Tailwind CSS
 - 状態管理: React の標準機能（useState / Server Components）。専用ライブラリは必要になるまで入れない
 - 画像リサイズ: Canvas API（ブラウザ標準・ライブラリ不要）

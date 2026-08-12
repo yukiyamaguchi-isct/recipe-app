@@ -184,4 +184,4 @@ S3_BUCKET_NAME=
 |---|---|
 | Neon の接続文字列を2種類取り違える | Neon のコンソールで pooled / direct の表示を確認する。`DIRECT_URL` は migrate 専用 |
 | Prisma のバージョンによって `directUrl` の書き方が違う | 公式ドキュメントで現行の書式を確認する。記憶で書かない |
-| Next.js 15 と各ライブラリの互換 | `create-next-app` の生成物をそのまま使い、後から手で書き換えない |
+| Next.js 16 と各ライブラリの互換 | `create-next-app` の生成物をそのまま使い、後から手で書き換えない |

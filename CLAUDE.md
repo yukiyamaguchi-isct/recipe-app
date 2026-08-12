@@ -42,7 +42,7 @@ recipe-app/
 
 詳細と選定理由は `.kiro/steering/tech-stack.md`。
 
-- Next.js 15（App Router）+ TypeScript + Tailwind CSS
+- Next.js 16（App Router）+ TypeScript + Tailwind CSS
 - Next.js Route Handlers（別途Expressは立てない）
 - Neon（PostgreSQL, Free）+ Prisma
 - Auth.js（NextAuth v5）+ **Google provider**、session strategy は `jwt`
