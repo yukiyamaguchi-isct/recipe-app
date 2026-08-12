@@ -55,7 +55,7 @@ Google アカウントでログインできるようにするために必要。
 http://localhost:3000/api/auth/callback/google
 ```
 
-  - 本番用の URI は Vercel にデプロイしてドメインが決まってから追加する（後から追加できる）
+- 本番用の URI は Vercel にデプロイしてドメインが決まってから追加する（後から追加できる）
 - [ ] **クライアント ID とクライアントシークレットをコピーする**
 
 ### AUTH_SECRET の生成
@@ -165,14 +165,14 @@ https://（Vercelのドメイン）/api/auth/callback/google
 
 各サービスのコンソールは UI が変わることがある。上の手順どおりの画面が出ない場合は、公式ドキュメントを確認する。
 
-| サービス | ドキュメント |
-|---|---|
-| Neon | https://neon.com/docs |
-| Auth.js | https://authjs.dev |
-| Google OAuth | https://developers.google.com/identity/protocols/oauth2 |
-| Anthropic API | https://platform.claude.com/docs |
-| AWS S3 | https://docs.aws.amazon.com/s3/ |
-| Vercel | https://vercel.com/docs |
+| サービス      | ドキュメント                                            |
+| ------------- | ------------------------------------------------------- |
+| Neon          | https://neon.com/docs                                   |
+| Auth.js       | https://authjs.dev                                      |
+| Google OAuth  | https://developers.google.com/identity/protocols/oauth2 |
+| Anthropic API | https://platform.claude.com/docs                        |
+| AWS S3        | https://docs.aws.amazon.com/s3/                         |
+| Vercel        | https://vercel.com/docs                                 |
 
 **料金や制限値はサービス側で改定されるため、このファイルには金額・上限値を書かない。** 必要なときは公式ドキュメントで確認する。
 

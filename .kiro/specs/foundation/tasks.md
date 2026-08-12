@@ -58,14 +58,22 @@
 
 ---
 
-## 段階3: Prettier を導入して `npm run format` でコードを整形できるようにする
+## 段階3: Prettier を導入して `npm run format` でコードを整形できるようにする ✅
 
-- [ ] Prettier を導入し、設定ファイルを作る
-- [ ] ESLint と Prettier が競合しないよう設定する（競合していると整形が戻される）
-- [ ] `npm run format` を実行し、実際にコードが整形されることを確認する
-- [ ] `npm run lint` が引き続き通ることを確認する
+- [x] Prettier を導入し、設定ファイル（`.prettierrc.json`）を作る
+- [x] ESLint と Prettier が競合しないか確認する → **競合なし。追加設定は不要だった**
+- [x] 整形対象から外すものを `.prettierignore` に定義する
+- [x] `npm run format` を実行し、実際にコードが整形されることを確認する
+- [x] `npm run lint` が引き続き通ることを確認する
 
-**受け入れ基準**: `npm run format` でコードが整形され、`npm run lint` も通る
+**受け入れ基準**: ✅ `prettier --check` / `lint` / `tsc` / `build` がすべて終了コード0
+
+### 実施時の記録
+
+- **`eslint-config-prettier` は不要だった。** 競合を想定して入れたが、`eslint-config-next` 16 は整形ルールを含まないため `npm run lint` は最初から通った。**推測で入れる前に実測すべきだった**ので、確認後にアンインストールした
+- **`prettier --write .` が参照ガイド2件（計3300行）を書き換えた。** `kiro-personal-app-guide.md` と `kiro-ai-prompts-template.md` は外部から持ち込んだ資料なので原文のまま保つべき。`git checkout` で戻し、`.prettierignore` に追加した
+- `.prettierrc.json` に `prettier-plugin-prisma` を書いたため Prettier が起動しなくなった。設定から消すのではなくプラグインを入れて解決した（`.prisma` ファイルも整形対象になる）
+- 自プロジェクトの `.md`（REQUIREMENTS.md / UI_DESIGN.md / .kiro配下 など）は整形対象に含めた。表の桁が揃うため、生のまま読むときに見やすい
 
 ---
 

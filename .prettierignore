@@ -1,0 +1,14 @@
+# Prisma の生成物。手を入れないので整形しない
+/generated
+
+# ビルド成果物
+/.next
+/out
+/build
+
+# 外部から持ち込んだ参照資料。原文のまま保つ
+kiro-personal-app-guide.md
+kiro-ai-prompts-template.md
+
+# 依存関係のロックファイル
+package-lock.json

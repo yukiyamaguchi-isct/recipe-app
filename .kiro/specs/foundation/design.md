@@ -35,15 +35,15 @@ recipe-app/
 
 入ったのは **Prisma 7.9.1**。学習データの多くは v6 以前なので、**書く前に必ず確認すること**。
 
-| 項目 | v6 以前 | **Prisma 7** |
-|---|---|---|
-| ジェネレータ | `prisma-client-js` | **`prisma-client`**（旧版は非推奨） |
-| `output` | 不要（node_modules に自動生成） | **必須**。生成物は指定パスに出る |
-| import 元 | `@prisma/client` | **生成先のパス**（`@/generated/prisma/client`） |
-| 接続URL | スキーマの `datasource` に `url` / `directUrl` | **スキーマに書けない**（書くと P1012 エラー） |
-| マイグレーション用の接続 | `directUrl` | **`prisma.config.ts` の `datasource.url`** |
-| 実行時の接続 | `url` | **`PrismaClient` に渡すドライバアダプタ** |
-| `.env` の読み込み | 実行時に自動 | **手動**（`import "dotenv/config"`） |
+| 項目                     | v6 以前                                        | **Prisma 7**                                    |
+| ------------------------ | ---------------------------------------------- | ----------------------------------------------- |
+| ジェネレータ             | `prisma-client-js`                             | **`prisma-client`**（旧版は非推奨）             |
+| `output`                 | 不要（node_modules に自動生成）                | **必須**。生成物は指定パスに出る                |
+| import 元                | `@prisma/client`                               | **生成先のパス**（`@/generated/prisma/client`） |
+| 接続URL                  | スキーマの `datasource` に `url` / `directUrl` | **スキーマに書けない**（書くと P1012 エラー）   |
+| マイグレーション用の接続 | `directUrl`                                    | **`prisma.config.ts` の `datasource.url`**      |
+| 実行時の接続             | `url`                                          | **`PrismaClient` に渡すドライバアダプタ**       |
+| `.env` の読み込み        | 実行時に自動                                   | **手動**（`import "dotenv/config"`）            |
 
 **接続の指定が2箇所に分かれる**のが最大の違い。役割が別なので、どちらか片方だけでは動かない。
 
@@ -143,8 +143,8 @@ model Recipe {
 model Ingredient {
   id       String   @id @default(cuid())
   recipeId String
-  name     String              // 例: 玉ねぎ
-  amount   String?             // 例: 200g（単位込みの文字列。解析結果をそのまま保持）
+  name     String // 例: 玉ねぎ
+  amount   String? // 例: 200g（単位込みの文字列。解析結果をそのまま保持）
   category Category
   order    Int
   recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -163,21 +163,21 @@ model Step {
 }
 
 enum Category {
-  SEASONING   // 調味料
-  VEGETABLE   // 野菜
-  OTHER       // その他
+  SEASONING // 調味料
+  VEGETABLE // 野菜
+  OTHER // その他
 }
 ```
 
 ### スキーマ上の決定と理由
 
-| 決定 | 理由 |
-|---|---|
+| 決定                                           | 理由                                                                                                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `amount` を数値と単位に分けず1つの文字列にする | MVPでは分量を計算しない。「少々」「適量」「1/2個」など数値化できない表記が実際のレシピに多い。単位変換（後続フェーズ）を実装する段階で分割を検討する |
-| `category` を enum にする | 3種類に固定されており、文字列だと表記ゆれが入る |
-| `order` を持たせる | 材料も手順も、レシピ上の並び順に意味がある。DBの取得順に依存させない |
-| `onDelete: Cascade` | レシピを削除したら材料・手順も消える。孤児レコードを残さない |
-| `User` を今の段階で定義する | `Recipe.userId` の外部キーに必要。Auth.js のモデルとの整合は Phase 1 で取る |
+| `category` を enum にする                      | 3種類に固定されており、文字列だと表記ゆれが入る                                                                                                      |
+| `order` を持たせる                             | 材料も手順も、レシピ上の並び順に意味がある。DBの取得順に依存させない                                                                                 |
+| `onDelete: Cascade`                            | レシピを削除したら材料・手順も消える。孤児レコードを残さない                                                                                         |
+| `User` を今の段階で定義する                    | `Recipe.userId` の外部キーに必要。Auth.js のモデルとの整合は Phase 1 で取る                                                                          |
 
 > **Phase 1 での注意**: Auth.js の Prisma アダプタは `User` に特定のフィールドを要求する。ここで定義した `User` と衝突する可能性があるため、Phase 1 では**公式ドキュメントで必要なスキーマを確認してから**マージする。記憶で書かない。
 
@@ -234,8 +234,8 @@ S3_BUCKET_NAME=
 
 ## リスクと対策
 
-| リスク | 対策 |
-|---|---|
-| Neon の接続文字列を2種類取り違える | Neon のコンソールで pooled / direct の表示を確認する。`DIRECT_URL` は migrate 専用 |
-| Prisma のバージョンによって `directUrl` の書き方が違う | 公式ドキュメントで現行の書式を確認する。記憶で書かない |
-| Next.js 16 と各ライブラリの互換 | `create-next-app` の生成物をそのまま使い、後から手で書き換えない |
+| リスク                                                 | 対策                                                                               |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Neon の接続文字列を2種類取り違える                     | Neon のコンソールで pooled / direct の表示を確認する。`DIRECT_URL` は migrate 専用 |
+| Prisma のバージョンによって `directUrl` の書き方が違う | 公式ドキュメントで現行の書式を確認する。記憶で書かない                             |
+| Next.js 16 と各ライブラリの互換                        | `create-next-app` の生成物をそのまま使い、後から手で書き換えない                   |
