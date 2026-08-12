@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 recipe-app/
 ├── REQUIREMENTS.md            # 要件定義（スコープ・機能要件・非機能要件・データモデル）
 ├── UI_DESIGN.md               # UI設計（画面一覧・遷移・各画面の設計・決定事項）
+├── SETUP.md                   # 開発者が手動でやる作業（外部サービス登録・キー取得）
 ├── .kiro/                     # Kiroフレームワーク。実装の「記憶」
 │   ├── README.md              # .kiroの使い方と実装フェーズ一覧
 │   ├── steering/              # 技術スタックとアーキテクチャ方針
@@ -33,6 +34,7 @@ recipe-app/
 | `UI_DESIGN.md` | アプリ全体の画面設計。**4章**がUI上の決定事項 |
 | `.kiro/steering/` | 技術スタックとアーキテクチャ方針。**確定済み** |
 | `.kiro/specs/<feature>/` | 機能単位の仕様。フェーズ着手時に作る |
+| `SETUP.md` | 開発者が手で行う外部サービスの設定。**AIが代行できない作業のみ**を書く。実装方針は書かない |
 
 仕様に迷いが出たら推測で埋めず、どの文書に書くべきかを判断して追記し、ユーザーに確認する。
 
