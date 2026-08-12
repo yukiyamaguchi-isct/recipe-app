@@ -77,14 +77,23 @@
 
 ---
 
-## 段階4: Vitest を導入して `npm run test` でテストを実行できるようにする
+## 段階4: Vitest を導入して `npm run test` でテストを実行できるようにする ✅
 
-- [ ] Vitest を導入し、`vitest.config.ts` を作る
-- [ ] サンプルテストを1本書く
-- [ ] `npm run test` が成功することを確認する
-- [ ] 意図的に失敗するテストで、失敗が検出されることを確認する
+- [x] Vitest を導入し、`vitest.config.mts` を作る
+- [x] テストを2本書く（Prismaスキーマの検証 / トップページの描画）
+- [x] `npm run test` が成功することを確認する
+- [x] 意図的に失敗するテストで、失敗が終了コード1で検出されることを確認する
 
-**受け入れ基準**: `npm run test` でテストが実行され、成功と失敗の両方が正しく判定される
+**受け入れ基準**: ✅ `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
+
+### 実施時の記録
+
+- **`vite-tsconfig-paths` は不要だった。** Next.js の公式ガイド（`node_modules/next/dist/docs/.../vitest.md`）の手順に従って入れたが、Vitest 実行時に「Vite がネイティブ対応したので `resolve.tsconfigPaths: true` を使え」と警告が出た。**バンドルされている公式ガイドも最新とは限らない**。指示に従って差し替えたところ、**実行時間が 64秒 → 4.8秒 に短縮**された
+- 設定ファイルは `.ts` ではなく **`.mts`**（公式ガイドの指定どおり）
+- サンプルテストは「捨てにならないもの」を選んだ
+  - `__tests__/schema.test.ts` — `Category` enum が3種のままか検証。**`@/*` エイリアスの解決とPrisma生成物のimportも同時に確認できる**
+  - `__tests__/page.test.tsx` — DOM側（jsdom + Testing Library + React プラグイン）の疎通確認。対象は差し替わる初期ページなので、文言ではなく「見出しが存在する」ことだけを見る
+- `npm run test` は `vitest run`（1回実行）、`npm run test:watch` が監視モード。既定の `vitest` は監視モードで止まらないため、検証手順には `run` を使う
 
 ---
 
