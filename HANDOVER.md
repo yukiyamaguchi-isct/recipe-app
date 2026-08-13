@@ -4,8 +4,13 @@
 
 - 最終更新: 2026-08-13
 - 現在地: **Phase 0（foundation）完了 / Phase 1（user-auth）未着手**
-- ブランチ: `feat/foundation`（push済み・`main` 未マージ）
-- 最新コミット: `f5a710c Phase 0の受け入れ基準を確認しフェーズを完了にする`
+- ブランチ: `feat/foundation` は `main` にマージ済み・push済み。**次のフェーズは `main` から切る**
+
+現在地を自分で確認するコマンド:
+
+```bash
+cd /c/recipe-app && git log --oneline -5 && git status --short --branch
+```
 
 ---
 
@@ -77,36 +82,26 @@ __tests__/
 
 ---
 
-## 2. 引き継ぐ前に決めるべきこと（未決 2件）
+## 2. 決着済みの論点（蒸し返さないこと）
 
-**どちらも Phase 1 のコードを書き始める前に決める。**
+Phase 0 の終了時に未決だった2件は、いずれもユーザーが判断済み。
 
-### 2.1 `npm run lint` の厳しさ
+### 2.1 `npm run lint` は warning でも失敗する ✅ 決定済み
 
-未使用変数を置いて実測したところ、**warning 扱いで終了コードは 0** だった。
+未使用変数を置いて実測したところ、当初は **warning 扱いで終了コードが 0** になり、`CLAUDE.md` の「すべて終了コード0」という検証条件をすり抜けていた。
+
+**対応: `package.json` の `lint` を `eslint --max-warnings 0` に変更した。**
 
 ```
-2:9  warning  'unused' is assigned a value but never used  @typescript-eslint/no-unused-vars
-✖ 1 problem (0 errors, 1 warning)   → 終了コード 0
+✖ 1 problem (0 errors, 1 warning)
+ESLint found too many warnings (maximum: 0).   → 終了コード 1
 ```
 
-`CLAUDE.md` の「段階終了前の検証」は「すべて終了コード0」を条件にしているため、**この状態では lint がゲートとして機能していない**。
+**未使用変数が1つでもあるとコミット前の検証が落ちる。** 落ちたら設定を緩めるのではなく、コードを直す。
 
-- 案A: `package.json` の `lint` を `eslint --max-warnings 0` にする（warning も失敗扱い）
-- 案B: 現状のまま
+### 2.2 `main` へマージ済み ✅ 決定済み
 
-→ **ユーザー未回答。** 詳細は `.kiro/specs/foundation/tasks.md` 段階5。
-
-### 2.2 `feat/foundation` を `main` にマージするか
-
-push 済みだがブランチのまま。以下のどちらか。
-
-- PR を作って `main` にマージし、`main` から `feat/user-auth` を切る
-- マージせず `feat/foundation` から `feat/user-auth` を派生させる
-
-→ **ユーザー未回答。**
-
-PR用URL: https://github.com/yukiyamaguchi-isct/recipe-app/pull/new/feat/foundation
+`feat/foundation` は `main` に fast-forward マージして push 済み。**次のフェーズのブランチは `main` から切る。**
 
 ---
 
@@ -159,7 +154,7 @@ Google アカウントでログインできるようにする。session strategy
 
 ```
 1. ユーザーに「Phase 1 に入る」と報告し、ブランチ作成の許可を得る
-2. feat/user-auth を作成
+2. main から feat/user-auth を作成
 3. 上記の調査を行う
 4. .kiro/specs/user-auth/ に requirements.md / design.md / tasks.md を作成
 5. 段階に分けて実装 → 各段階で検証 → 報告 → 許可を得てコミット

@@ -33,10 +33,9 @@ recipe-app/
 └── CLAUDE.md
 ```
 
-### 未決事項（Phase 1 のコードを書く前に決める）
+### 次にやること
 
-1. **`npm run lint` を `--max-warnings 0` にするか。** 現状 warning では終了コード0になり、検証のゲートとして機能していない
-2. **`feat/foundation` を `main` にマージするか。** push済みだがブランチのまま
+**Phase 1（user-auth）**。着手前に `AUTH_SECRET` の生成（`SETUP.md` の Phase 1）と、Auth.js の Next.js 16 対応状況の調査が必要。詳細は `HANDOVER.md` の4章。
 
 ## Read the design docs first
 
@@ -121,7 +120,7 @@ kiro作成（.kiro/specs/<feature>/ の requirements / design / tasks）
 
 ```bash
 npm run format      # コードを整形する（差分が出たらそのままコミットに含める）
-npm run lint        # ESLint
+npm run lint        # ESLint（warning も失敗扱い。`--max-warnings 0`）
 npx tsc --noEmit    # 型チェック
 npm run test        # テスト
 npm run build       # ビルド
