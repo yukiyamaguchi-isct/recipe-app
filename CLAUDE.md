@@ -8,10 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-**実装前**。リポジトリには設計文書のみが存在し、コードもツールチェーンもまだない。
+**Phase 0（foundation）完了 / Phase 1（user-auth）未着手**（2026-08-13 時点）。
+
+ツールチェーン（Next.js 16 / Prisma 7 + Neon / Prettier / Vitest）は動く状態にあるが、**アプリの機能コードはまだ無い**。`app/page.tsx` は create-next-app の初期ページのまま。
+
+**セッションを引き継いだ場合は `HANDOVER.md` を最初に読むこと。** 現在地・未決事項・次の作業がまとまっている。
 
 ```
 recipe-app/
+├── HANDOVER.md                # 引き継ぎ資料。現在地・未決事項・次にやること
 ├── REQUIREMENTS.md            # 要件定義（スコープ・機能要件・非機能要件・データモデル）
 ├── UI_DESIGN.md               # UI設計（画面一覧・遷移・各画面の設計・決定事項）
 ├── SETUP.md                   # 開発者が手動でやる作業（外部サービス登録・キー取得）
@@ -19,10 +24,19 @@ recipe-app/
 │   ├── README.md              # .kiroの使い方と実装フェーズ一覧
 │   ├── steering/              # 技術スタックとアーキテクチャ方針
 │   └── specs/<feature>/       # 機能ごとの requirements / design / tasks
+├── app/                       # layout / page（初期状態）、api/ は空
+├── lib/                       # prisma.ts のみ。services / repositories / clients は空
+├── prisma/                    # schema.prisma と初回マイグレーション
+├── __tests__/                 # 疎通確認用のテスト2本
 ├── kiro-personal-app-guide.md      # Kiroフレームワークの参考ガイド
 ├── kiro-ai-prompts-template.md     # 同上（プロンプト集）
 └── CLAUDE.md
 ```
+
+### 未決事項（Phase 1 のコードを書く前に決める）
+
+1. **`npm run lint` を `--max-warnings 0` にするか。** 現状 warning では終了コード0になり、検証のゲートとして機能していない
+2. **`feat/foundation` を `main` にマージするか。** push済みだがブランチのまま
 
 ## Read the design docs first
 
@@ -30,6 +44,7 @@ recipe-app/
 
 | 文書                     | 役割                                                                                       |
 | ------------------------ | ------------------------------------------------------------------------------------------ |
+| `HANDOVER.md`            | **セッション引き継ぎ用。今どこまで終わっていて次に何をするか。まずこれを読む**             |
 | `REQUIREMENTS.md`        | アプリ全体の要件。**3章**がMVPスコープ、**5章**が後続フェーズ、**9章**が決定事項と理由     |
 | `UI_DESIGN.md`           | アプリ全体の画面設計。**4章**がUI上の決定事項                                              |
 | `.kiro/steering/`        | 技術スタックとアーキテクチャ方針。**確定済み**                                             |

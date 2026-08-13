@@ -13,18 +13,18 @@
 
 ---
 
-## Phase 0: foundation — Neon（PostgreSQL）
+## Phase 0: foundation — Neon（PostgreSQL） ✅ 完了
 
 Next.js 雛形を作った後、DB に繋ぐために必要。
 
-- [ ] **Neon にサインアップする** — https://neon.tech
-- [ ] **プロジェクトを作成する**
+- [x] **Neon にサインアップする** — https://neon.tech
+- [x] **プロジェクトを作成する**
   - リージョンは日本から近いところ（例: Asia Pacific / Singapore）を選ぶと速い
-- [ ] **接続文字列を2種類コピーする**
+- [x] **接続文字列を2種類コピーする**
   - **Pooled connection**（プール接続）→ `.env` の `DATABASE_URL` に入れる
   - **Direct connection**（直接接続）→ `.env` の `DIRECT_URL` に入れる
   - Neon のダッシュボードに両方が表示される。切り替えのトグルやチェックボックスがあるので、**2回コピーする**
-- [ ] `.env` に貼り付ける
+- [x] `.env` に貼り付ける
 
 ```
 DATABASE_URL="postgresql://...?sslmode=require"   # Pooled
@@ -39,15 +39,17 @@ DIRECT_URL="postgresql://...?sslmode=require"     # Direct
 
 Google アカウントでログインできるようにするために必要。
 
-### Google Cloud Console でのOAuthクライアント作成
+> **残作業: `AUTH_SECRET` の生成のみ。** OAuth クライアントの作成は完了済み。
 
-- [ ] **Google Cloud Console にアクセスする** — https://console.cloud.google.com
-- [ ] **プロジェクトを作成する**（既存のものがあれば流用可）
-- [ ] **OAuth 同意画面を設定する**
+### Google Cloud Console でのOAuthクライアント作成 ✅ 完了
+
+- [x] **Google Cloud Console にアクセスする** — https://console.cloud.google.com
+- [x] **プロジェクトを作成する**（既存のものがあれば流用可）
+- [x] **OAuth 同意画面を設定する**
   - User Type は「外部」を選ぶ
   - アプリ名、サポートメール、デベロッパーの連絡先を入力する
   - 自分だけで使う間は「テスト」状態のままでよい。その場合は**テストユーザーに自分の Google アカウントを追加する**（追加しないとログインできない）
-- [ ] **認証情報 → OAuth クライアント ID を作成する**
+- [x] **認証情報 → OAuth クライアント ID を作成する**
   - アプリケーションの種類: **ウェブアプリケーション**
   - **承認済みのリダイレクト URI** に以下を追加する
 
@@ -56,11 +58,11 @@ http://localhost:3000/api/auth/callback/google
 ```
 
 - 本番用の URI は Vercel にデプロイしてドメインが決まってから追加する（後から追加できる）
-- [ ] **クライアント ID とクライアントシークレットをコピーする**
+- [x] **クライアント ID とクライアントシークレットをコピーする**
 
-### AUTH_SECRET の生成
+### AUTH_SECRET の生成 ⬅️ **未完了**
 
-セッション（JWT）の署名に使う鍵。自分で生成する。
+セッション（JWT）の署名に使う鍵。自分で生成する。**これが無いと Phase 1 の実装に着手できない。**
 
 - [ ] 以下を実行して出た文字列をコピーする
 
