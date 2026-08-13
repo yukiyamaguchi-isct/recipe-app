@@ -39,13 +39,20 @@ Auth.js の Prisma アダプタが要求するスキーマを揃える。**型�
 
 ## 段階2: Auth.js を導入して Google 認証のエンドポイントを追加する
 
-- [ ] `next-auth@beta` と `@auth/prisma-adapter` を導入する（バージョンを固定する）
-- [ ] `auth.ts` を作る（Google provider / `session.strategy = "jwt"` / アダプタ / `jwt`・`session` コールバック）
-- [ ] `app/api/auth/[...nextauth]/route.ts` を作る
-- [ ] `types/next-auth.d.ts` で `session.user.id` の型を足す
-- [ ] `npm run build` が通ることを確認する
+- [x] `next-auth@beta` と `@auth/prisma-adapter` を導入する（バージョンを固定する）
+- [x] `auth.ts` を作る（Google provider / `session.strategy = "jwt"` / アダプタ / `jwt`・`session` コールバック）
+- [x] `app/api/auth/[...nextauth]/route.ts` を作る
+- [x] `types/next-auth.d.ts` で `session.user.id` の型を足す
+- [x] `npm run build` が通ることを確認する
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
+
+### 実施時の記録
+
+- 入ったのは `next-auth@5.0.0-beta.32` / `@auth/prisma-adapter@2.11.3`。**キャレットを外して固定した。** `^5.0.0-beta.32` は beta.33 以降や 5.0.0 安定版まで拾ってしまい、beta 間の破壊的変更を自動で踏むため
+- **design.md の `route.ts` の記述が誤っていたので直した。** `auth.ts` が export するのは `handlers` であり、`export { GET, POST } from "@/auth"` では解決しない。正しくは `import { handlers } from "@/auth"` してから `export const { GET, POST } = handlers`
+- **`JWT` の module augmentation は `@auth/core/jwt` に対して行う。** `next-auth/jwt` は再エクスポートのみで `JWT` を宣言しておらず、そちらを拡張すると合流せずに `token.userId` が `unknown` のまま残り、`TS2322: Type '{}' is not assignable to type 'string'` で落ちる。design.md に追記済み
+- `DATABASE_URL` が無い環境でも `npm run build` は通った。`/api/auth/[...nextauth]` が動的ルート（`ƒ`）としてビルドされ、`lib/prisma.ts` がビルド時に評価されないため
 
 ---
 

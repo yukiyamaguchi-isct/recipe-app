@@ -170,7 +170,7 @@ model Account {
 auth.ts                             # Auth.js の設定。handlers / auth / signIn / signOut を export
 proxy.ts                            # export { auth as proxy }。先回りリダイレクト
 app/
-├── api/auth/[...nextauth]/route.ts # export { GET, POST } from "@/auth"
+├── api/auth/[...nextauth]/route.ts # export const { GET, POST } = handlers
 ├── login/page.tsx                  # S-01
 ├── page.tsx                        # ホーム（Phase 4 で S-02 に差し替わる暫定）
 └── layout.tsx
@@ -214,6 +214,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 ### `session.user.id` の型
 
 `next-auth` の `Session["user"]` に `id` は無いため、module augmentation で足す。`types/next-auth.d.ts` に置く。
+
+**`JWT` の拡張先は `next-auth/jwt` ではなく `@auth/core/jwt`。** `next-auth/jwt.d.ts` の中身は `export * from "@auth/core/jwt"` だけで `JWT` を宣言していないため、`declare module "next-auth/jwt"` は既存の型と合流せず別物になる。合流しないと `JWT extends Record<string, unknown>` の index signature が効いて `token.userId` が `unknown` のままになり、`session.user.id` への代入が `TS2322: Type '{}' is not assignable to type 'string'` で落ちる（実測）。
 
 ## 認可の実装方針
 
