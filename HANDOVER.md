@@ -115,22 +115,24 @@ ESLint found too many warnings (maximum: 0).   → 終了コード 1
 | `DIRECT_URL`            | 0     | ✅ 設定済み                           |
 | `AUTH_GOOGLE_ID`        | 1     | ✅ 設定済み                           |
 | `AUTH_GOOGLE_SECRET`    | 1     | ✅ 設定済み                           |
-| `AUTH_SECRET`           | 1     | ❌ **空**                             |
+| `AUTH_SECRET`           | 1     | ✅ 設定済み                           |
 | `ANTHROPIC_API_KEY`     | 2     | ❌ 空（未着手フェーズなので問題なし） |
 | `AWS_ACCESS_KEY_ID`     | 2     | ❌ 空（同上）                         |
 | `AWS_SECRET_ACCESS_KEY` | 2     | ❌ 空（同上）                         |
 | `AWS_REGION`            | 2     | ✅ 設定済み                           |
 | `S3_BUCKET_NAME`        | 2     | ❌ 空（同上）                         |
 
-### ⚠️ Phase 1 に入る前にユーザーがやること
+**Phase 1 に必要な環境変数はすべて揃っている。** ユーザー側の手作業待ちは無いので、そのまま着手してよい。
 
-**`AUTH_SECRET` の生成が残っている。** これが無いと Auth.js のセッション署名ができない。
+次にユーザーの手作業が必要になるのは **Phase 2**（Anthropic API キーと AWS S3）。手順は `SETUP.md` の Phase 2。
+
+環境変数の充足状況を自分で確認するコマンド（**値は表示せず、設定済みかどうかだけ出す**）:
 
 ```bash
-npx auth secret
+cd /c/recipe-app && while IFS= read -r line; do case "$line" in ''|'#'*) continue;; esac; k="${line%%=*}"; v="${line#*=}"; [ -n "$v" ] && echo "$k: 設定あり" || echo "$k: 空"; done < .env
 ```
 
-出力を `.env` の `AUTH_SECRET=` に貼る。詳細は `SETUP.md` の Phase 1。
+> **`.env` の中身をそのまま出力しないこと。** 会話ログに秘密情報が残る。判定に必要なのは「空かどうか」だけ。
 
 ---
 

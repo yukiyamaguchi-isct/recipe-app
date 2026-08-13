@@ -35,11 +35,11 @@ DIRECT_URL="postgresql://...?sslmode=require"     # Direct
 
 ---
 
-## Phase 1: user-auth — Google OAuth
+## Phase 1: user-auth — Google OAuth ✅ 完了
 
 Google アカウントでログインできるようにするために必要。
 
-> **残作業: `AUTH_SECRET` の生成のみ。** OAuth クライアントの作成は完了済み。
+> **このフェーズの手作業は完了済み。** 次に手を動かす必要があるのは Phase 2。
 
 ### Google Cloud Console でのOAuthクライアント作成 ✅ 完了
 
@@ -60,11 +60,11 @@ http://localhost:3000/api/auth/callback/google
 - 本番用の URI は Vercel にデプロイしてドメインが決まってから追加する（後から追加できる）
 - [x] **クライアント ID とクライアントシークレットをコピーする**
 
-### AUTH_SECRET の生成 ⬅️ **未完了**
+### AUTH_SECRET の生成 ✅ 完了
 
-セッション（JWT）の署名に使う鍵。自分で生成する。**これが無いと Phase 1 の実装に着手できない。**
+セッション（JWT）の署名に使う鍵。自分で生成する。
 
-- [ ] 以下を実行して出た文字列をコピーする
+- [x] 以下を実行して出た文字列をコピーする
 
 ```bash
 npx auth secret
