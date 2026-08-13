@@ -14,12 +14,40 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  image     String?
-  createdAt DateTime @default(now())
-  recipes   Recipe[]
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  // Auth.js は初回ログイン時に createUser({ ...profile, emailVerified: null }) を呼ぶ。
+  // アダプタは undefined しか除去しないため null がそのまま create に渡り、
+  // このフィールドが無いと初回ログインで落ちる。アプリのロジックでは参照しない。
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  accounts      Account[]
+  recipes       Recipe[]
+}
+
+// Auth.js（Prisma アダプタ）が要求するモデル。
+// フィールド名の snake_case は OAuth のレスポンスのキー名そのままで、
+// アダプタが値をこの名前で渡してくる。リネームすると linkAccount が実行時に落ちる。
+// session strategy が jwt のため Session / VerificationToken は使わない（作らない）。
+model Account {
+  userId            String
+  type              String // "oidc"（Google は OIDC プロバイダ）
+  provider          String // "google"
+  providerAccountId String // Google が振る不変のID。メールアドレスと違い変わらない
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // アダプタが where: { provider_providerAccountId } で引くため、この組み合わせの一意制約が要る
+  @@id([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Recipe {

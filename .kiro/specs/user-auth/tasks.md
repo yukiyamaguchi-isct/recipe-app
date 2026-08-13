@@ -18,14 +18,22 @@
 
 Auth.js の Prisma アダプタが要求するスキーマを揃える。**型では捕まらないため、design.md の「調査結果6」で逆算した内容をそのまま入れる。**
 
-- [ ] `User` に `emailVerified DateTime?` と `accounts Account[]` を追加する
-- [ ] `Account` モデルを追加する（複合主キー `@@id([provider, providerAccountId])`）
-- [ ] `npx prisma generate` が通ることを確認する
-- [ ] マイグレーションファイルを生成する
+- [x] `User` に `emailVerified DateTime?` と `accounts Account[]` を追加する
+- [x] `Account` モデルを追加する（複合主キー `@@id([provider, providerAccountId])`）
+- [x] `npx prisma generate` が通ることを確認する
+- [x] スキーマのテストを追加する（型で捕まらないぶんの担保）
+- [ ] **マイグレーションファイルを生成する（ローカル作業。下記参照）**
 
 **受け入れ基準**: `prisma generate` 成功、`format` / `lint` / `tsc` / `test` が終了コード0
 
 > **⚠️ この段階はローカルでの作業が要る。** `npx prisma migrate dev` は DB に接続してマイグレーションを生成・適用するため、Neon の接続情報が無い環境では実行できない。リモート側ではスキーマ変更までを行い、**マイグレーションの生成と適用はローカルで `npx prisma migrate dev --name add_auth_account` を実行する**。生成された `prisma/migrations/` をコミットに含める。
+
+### 実施時の記録
+
+- `npx prisma format` がフィールドの桁を揃えるため、`schema.prisma` は手で整形しない
+- **スキーマのテストを `__tests__/schema.test.ts` に追加した。** `Prisma.AccountScalarFieldEnum` / `Prisma.UserScalarFieldEnum` が生成物に**実行時の値として**存在するため、フィールド名の一覧をそのまま比較できる
+- テストが実際に欠落を捕まえることを確認した。`emailVerified` を一時的に削って `prisma generate` すると `expected [ Array(5) ] to include 'emailVerified'` で落ちる。確認後にスキーマを戻した
+- `Account` のフィールドの並び順まで含めて比較している。順序に意味は無いが、`toEqual` のほうが「増えた」場合も検出できるため採用した。将来 Auth.js の要求が変わったらこのテストが落ちるので、そこで design.md ごと見直す
 
 ---
 
