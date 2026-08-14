@@ -78,11 +78,19 @@ Auth.js の Prisma アダプタが要求するスキーマを揃える。**型�
 
 ## 段階4: セッションから userId を取得できるようにする
 
-- [ ] `lib/auth/session.ts` に `getUserId()` と `requireUserId()` を書く
-- [ ] `UnauthorizedError` を型付きエラーとして定義する（`.kiro/steering/architecture.md` のエラー処理）
-- [ ] テストを書く: 未ログインで `requireUserId()` が投げる / ログイン中は `userId` を返す
+- [x] `lib/auth/session.ts` に `getUserId()` と `requireUserId()` を書く
+- [x] `UnauthorizedError` を型付きエラーとして定義する（`.kiro/steering/architecture.md` のエラー処理）
+- [x] テストを書く: 未ログインで `requireUserId()` が投げる / ログイン中は `userId` を返す
 
 **受け入れ基準**: 上記5コマンドが終了コード0
+
+### 実施時の記録
+
+- `lib/errors.ts` は Phase 0 の design.md に名前だけ出ていたが未作成だったので、ここで作った。`AppError`（`code` を持つ基底）と `UnauthorizedError`（`code: "UNAUTHORIZED"`）のみ。**必要になったエラーだけを足す方針**とし、先回りして種類を増やさない
+- `vi.mock` のファクトリはファイル先頭に巻き上げられるため、参照するモックは `vi.hoisted` で一緒に巻き上げる必要がある。素直に `const authMock = vi.fn()` と書くと TDZ で落ちる
+- 「セッションはあるが `user.id` が無い」場合も未ログイン扱い（`null`）にした。`jwt` コールバックが `userId` を載せ損ねた場合に、`undefined` が `userId` として後続に流れるのを防ぐため
+
+> **Req4 の受け入れ基準のうち、Route Handler に関する2項目（「Route Handler から同じ userId を取得できる」「未ログインで Route Handler を叩くと 401 が返る」）は Phase 1 では確認できない。** このフェーズには保護対象の Route Handler が無いため。**Phase 2 で最初の保護付きエンドポイントを作る際に、`UnauthorizedError` → 401 の変換とあわせて確認する。** 確認用のダミーendpointは作らない（本番に残る不要な経路を増やさないため）。
 
 ---
 
