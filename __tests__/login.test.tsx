@@ -1,11 +1,29 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// vi.mock のファクトリは巻き上げられるため、参照するモックも vi.hoisted で巻き上げる。
+const { authMock, redirectMock } = vi.hoisted(() => ({
+  authMock: vi.fn(),
+  redirectMock: vi.fn(),
+}));
 
 // @/auth を実体で読むと lib/prisma.ts が評価され、DATABASE_URL 未設定で落ちる。
-// この画面のテストで見たいのは描画内容だけなので、signIn だけを差し替える。
-vi.mock("@/auth", () => ({ signIn: vi.fn() }));
+vi.mock("@/auth", () => ({ auth: authMock, signIn: vi.fn() }));
+
+// 本物の redirect() は例外を投げて描画を中断する。その挙動を再現する。
+vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 
 import LoginPage from "@/app/login/page";
+
+beforeEach(() => {
+  authMock.mockReset();
+  // 既定は未ログイン。ログイン済みの分岐を見るテストだけ上書きする
+  authMock.mockResolvedValue(null);
+  redirectMock.mockReset();
+  redirectMock.mockImplementation((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  });
+});
 
 // Server Component なので、呼び出して得た JSX を render する。
 function renderLoginPage(searchParams: { error?: string } = {}) {
@@ -46,5 +64,12 @@ describe("S-01 ログイン", () => {
     render(await renderLoginPage());
 
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("ログイン済みならホームへリダイレクトする", async () => {
+    authMock.mockResolvedValue({ user: { id: "user_123" } });
+
+    await expect(renderLoginPage()).rejects.toThrow("NEXT_REDIRECT:/");
+    expect(redirectMock).toHaveBeenCalledWith("/");
   });
 });

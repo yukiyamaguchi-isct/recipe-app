@@ -96,13 +96,22 @@ Auth.js の Prisma アダプタが要求するスキーマを揃える。**型�
 
 ## 段階5: proxy.ts を追加して未ログイン時にログイン画面へリダイレクトする
 
-- [ ] `proxy.ts` に `export { auth as proxy }` を書く
-- [ ] `matcher` で `api` / `_next/static` / `_next/image` / `favicon.ico` を除外する
-- [ ] `app/page.tsx` を認証必須のホームにする（ユーザー名の表示とログアウト）
-- [ ] ログイン済みで `/login` を開いたらホームへ送る
-- [ ] **proxy を外しても保護が成立する**ことを確認する（認可の本体が `await auth()` 側にあること）
+- [x] `proxy.ts` に `export { auth as proxy }` を書く
+- [x] **`auth.ts` に `authorized` コールバックを足す**（これが無いと proxy は何も保護しない。下記）
+- [x] `matcher` で `api` / `_next/static` / `_next/image` / `favicon.ico` を除外する
+- [x] `app/page.tsx` を認証必須のホームにする（ユーザー名の表示とログアウト）
+- [x] ログイン済みで `/login` を開いたらホームへ送る
+- [x] **proxy を外しても保護が成立する**ことを確認する（認可の本体が `await auth()` 側にあること）
 
 **受け入れ基準**: 上記5コマンドが終了コード0
+
+### 実施時の記録
+
+- **⚠️ `export { auth as proxy }` を置くだけでは何も保護されない。** next-auth の `handleAuth`（`node_modules/next-auth/lib/index.js` L146）は `let authorized = true;` から始まり、`config.callbacks.authorized` が無ければ常に通す。`auth.ts` に `authorized({ auth }) { return Boolean(session?.user) }` を足して初めてリダイレクトが起きる。**design.md の proxy.ts の記述が不十分だったので追記した**
+- `authorized` が `false` を返すと、next-auth が `pages.signIn`（= `/login`）へ `callbackUrl` 付きでリダイレクトする。`/login` 自身は同じ判定で `false` になるが、`request.nextUrl.pathname !== signInPage` のガードがあるため無限ループにはならない（同 L173）
+- **「proxy を外しても保護が成立する」を実測した。** `proxy.ts` を退避して `npm run dev` を起動し直し、`/` にアクセスすると **`callbackUrl` の付かない** `/login` へ 307 が返る。これは `app/page.tsx` 自身の `redirect("/login")` によるもの。proxy 有りだと `callbackUrl` が付くので、どちらが効いているか URL で見分けられる
+- `app/page.tsx` は `getUserId()` ではなく `auth()` を直接呼んでいる。表示にユーザー名が要るため。**`userId` だけが必要な箇所（データ取得）は `lib/auth/session.ts` を通す**、という切り分けは変えない
+- テストでは `next/navigation` の `redirect` をモックし、本物と同じく例外を投げる実装にしている。返り値が `undefined` だと後続のコードが走ってしまい、リダイレクトの検証にならないため
 
 ---
 

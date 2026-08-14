@@ -1,4 +1,6 @@
-import { signIn } from "@/auth";
+import { redirect } from "next/navigation";
+
+import { auth, signIn } from "@/auth";
 
 // Auth.js は失敗時に /login?error=<code> へ戻す（auth.ts の pages.error）。
 // code は @auth/core の SignInPageErrorParam / ErrorPageParam。
@@ -26,6 +28,12 @@ export default async function LoginPage({
   // Next.js 16 では searchParams が Promise。await して読む
   searchParams: Promise<{ error?: string }>;
 }) {
+  // ログイン済みならホームへ送る。ログイン画面に留まる意味が無いため
+  const session = await auth();
+  if (session?.user?.id) {
+    redirect("/");
+  }
+
   const { error } = await searchParams;
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? DEFAULT_ERROR_MESSAGE) : null;
 

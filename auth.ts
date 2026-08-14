@@ -38,5 +38,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
+
+    // proxy.ts が使う。false を返すと pages.signIn（/login）へリダイレクトされる。
+    // ⚠️ このコールバックが無いと next-auth は常に通す（lib/index.js の `let authorized = true`）。
+    // つまり proxy.ts を置くだけでは保護されない。
+    //
+    // ここは体感を良くするための先回りであって、認可の本体ではない。
+    // 本体は各 Server Component / Route Handler の auth() 側にある（design.md 調査結果4）。
+    authorized({ auth: session }) {
+      return Boolean(session?.user);
+    },
   },
 });

@@ -242,6 +242,15 @@ export async function requireUserId(): Promise<string> {
 - **クライアントから渡された `userId` を信用しない**（`.kiro/steering/architecture.md`）。以降のフェーズで `userId` を得る経路はここだけにする
 - Route Handler では `UnauthorizedError` を 401 に変換する。レスポンス形式は architecture.md の `{ success, data, error }` に従う
 
+**⚠️ `proxy.ts` を置くだけでは何も保護されない。** next-auth の `handleAuth`（`node_modules/next-auth/lib/index.js` L146）は `let authorized = true;` から始まり、`config.callbacks.authorized` が無ければ常に通す。`auth.ts` 側に以下を足して初めてリダイレクトが起きる。
+
+```ts
+// auth.ts の callbacks
+authorized({ auth: session }) {
+  return Boolean(session?.user);
+},
+```
+
 ```ts
 // proxy.ts
 export { auth as proxy } from "@/auth";
