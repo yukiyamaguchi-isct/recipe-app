@@ -58,13 +58,21 @@ Auth.js の Prisma アダプタが要求するスキーマを揃える。**型�
 
 ## 段階3: S-01 ログイン画面を作る
 
-- [ ] `app/login/page.tsx` に「Googleでログイン」ボタンとアプリの説明を置く
-- [ ] Server Action から `signIn("google")` を呼ぶ
-- [ ] エラー時（キャンセル等）に日本語のメッセージと再試行の導線を出す
-- [ ] `searchParams` を `await` して読む（Next.js 16）
-- [ ] テストを書く: ボタンが描画される / **パスワード入力欄が存在しない** / エラー時にメッセージが出る
+- [x] `app/login/page.tsx` に「Googleでログイン」ボタンとアプリの説明を置く
+- [x] Server Action から `signIn("google")` を呼ぶ
+- [x] エラー時（キャンセル等）に日本語のメッセージと再試行の導線を出す
+- [x] `searchParams` を `await` して読む（Next.js 16）
+- [x] テストを書く: ボタンが描画される / **パスワード入力欄が存在しない** / エラー時にメッセージが出る
 
 **受け入れ基準**: 上記5コマンドが終了コード0。ワイヤーフレームの古い S-01（メール＋パスワード）になっていないこと
+
+### 実施時の記録
+
+- **エラーコードの一覧は `@auth/core` のソースから取った。** `SignInPageErrorParam`（`src/types.ts` L205）と `ErrorPageParam`（同 L202）。Google のみの構成で出うるものだけを訳し、`ERROR_MESSAGES` に無いコードは既定の文言にフォールバックする
+- キャンセル時に来るのは `AccessDenied`。`OAuthCreateAccount` は DB へのユーザー作成が失敗したときで、**スキーマ不足があるとここに落ちる**（design.md 調査結果6）
+- **`vitest.setup.ts` を追加した。** Testing Library の自動クリーンアップは `globals: true` のときしか登録されず、このプロジェクトは無効。そのためテスト間で DOM が残り、2つ目以降の `getByRole("alert")` が「Found multiple elements」で落ちた（実測）。`afterEach(cleanup)` を明示的に登録して解消。**今後のコンポーネントテスト全部に効く箇所なので、テストファイル側では対処していない**
+- テストでは `@/auth` を `vi.mock` で差し替えている。実体を読むと `lib/prisma.ts` が評価され、`DATABASE_URL` 未設定の環境で落ちるため
+- Server Component は `render(await LoginPage({ searchParams: Promise.resolve({}) }))` の形で描画できる
 
 ---
 

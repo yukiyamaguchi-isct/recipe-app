@@ -11,6 +11,8 @@ export default defineConfig({
   test: {
     // jsdom: Reactコンポーネントの描画テストにDOMが要るため
     environment: "jsdom",
+    // テスト間で DOM を掃除する。詳細は vitest.setup.ts
+    setupFiles: ["./vitest.setup.ts"],
     exclude: [
       "**/node_modules/**",
       "**/.next/**",
