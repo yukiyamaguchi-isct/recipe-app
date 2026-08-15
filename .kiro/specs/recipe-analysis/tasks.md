@@ -91,15 +91,27 @@
 
 ## 段階3: sharp で画像を長辺2576px / JPEG品質85に正規化する `lib/images/normalize.ts` を追加する
 
-- [ ] `.rotate()` → `resize({ fit: "inside", withoutEnlargement: true })` → `jpeg({ quality: 85 })` の順で実装する
-- [ ] JPEG / PNG 以外を弾く（`UnsupportedFormatError`）
-- [ ] 10MB 超を弾く（`ImageTooLargeError`）
-- [ ] テスト: 長辺2576pxに収まる / 2576px未満を拡大しない / **`.rotate()` で EXIF 回転が適用される**
-- [ ] **`npm run build` を実行し、sharp を import した状態でビルドが通ることを確認する**（design.md 1.5 の ⚠️ / 落とし穴 #13）
+- [x] `.rotate()` → `resize({ fit: "inside", withoutEnlargement: true })` → `jpeg({ quality: 85 })` の順で実装する
+- [x] JPEG / PNG 以外を弾く（`UnsupportedFormatError`）
+- [x] 10MB 超を弾く（`ImageTooLargeError`）
+- [x] テスト: 長辺2576pxに収まる / 2576px未満を拡大しない / **`.rotate()` で EXIF 回転が適用される**
+- [x] **`npm run build` を実行し、sharp を import した状態でビルドが通ることを確認する**（design.md 1.5 の ⚠️ / 落とし穴 #13）
+- [x] 定数を `lib/images/constants.ts` に切り出す（クライアント側と共有するため）
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
 
 > **⚠️ ここが sharp の Vercel 対応を判定する段階。** ビルドが落ちた場合、design.md 1.5 の代替（WASM 版 / クライアント側のみ）へ切り替える判断が要る。**判断はユーザーに確認してから行う。**
+
+### 実施時の記録
+
+- **落とし穴 #13 がこの段階でも再現した。** `normalize.ts` を追加して `npm run build` は通ったが、`.next` を検索しても `sharp` が出てこなかった。**Next.js はルートから到達できるモジュールしかバンドルしない**ため、テストからしか import していない状態ではビルドが通って当然だった
+- そこで**使い捨ての Route Handler を一時的に置いて** `normalizeImage` を import させ、ビルド出力を検査した。**確認後に削除済み**（`git status` で残っていないことを確認）
+- 結果、`route.js.nft.json` に **`sharp-linux-x64-0.35.3.node` と `libvips-cpp.so.8.18.3` が含まれていた。** nft のトレースが Vercel の同梱ファイルを決めるので、**「本番で `Cannot find module sharp`」という最悪の失敗は起きない。** glibc 版と musl 版の両方が追跡されている。design.md 1.5 に再現手順ごと記録
+- **`app/api/__sharp-probe/` は Next.js のルートとして認識されなかった。** `_` 始まりのフォルダは App Router の private folder として routing から除外される。`sharp-probe` に改名して解決
+- **`failOn` の既定は `"warning"`。** sharp の型定義（`lib/index.d.ts` L992-996）に「信頼できない入力には既定の warning を使え」と明記されていたので緩めなかった。**副作用として軽微な破損のある実写真も弾く可能性があるため、段階12 で実測する**
+- **形式判定は宣言された MIME ではなく先頭バイトで行う**ようにした。`Content-Type: image/jpeg` と書いて HEIC を送るのは開発者ツールから簡単にできるため。HEIF は ISO-BMFF の `ftyp` ブランドで見分ける
+- **定数を `lib/images/constants.ts` に切り出した。** `normalize.ts` に置いたままクライアント側から import すると、**sharp がブラウザ向けバンドルに混入する**
+- **テストが `.rotate()` の欠落を捕まえることを確認した。** 一時的に外すと「Orientation=6 の横長画像が縦長になる」（`expected 1000 to be 500`）と「回転してから長辺を測る」（`expected 1932 to be 2576`）の2件が落ちる。確認後に戻した
 
 ---
 
