@@ -3,7 +3,7 @@
 **別セッションへ作業を引き継ぐための文書。** 新しいチャットを始めたら、まずこのファイルを読むこと。
 
 - 最終更新: 2026-08-15
-- 現在地: **Phase 1（user-auth）完了 / Phase 2（recipe-analysis）未着手**
+- 現在地: **Phase 1（user-auth）完了 / Phase 2（recipe-analysis）は設計まで完了・実装未着手**
 - ブランチ: `claude/recipe-app-progress-check-hbiv6f`（push済み・**未マージ**）。1章末尾を必ず読むこと
 
 現在地を自分で確認するコマンド:
@@ -103,14 +103,14 @@ f61f5ec feat: Auth.js 用に Account モデルと User.emailVerified を schema.
 
 `.kiro/README.md` のフェーズ表が正。
 
-| #   | feature           | 状態     |
-| --- | ----------------- | -------- |
-| 0   | `foundation`      | **完了** |
-| 1   | `user-auth`       | **完了** |
-| 2   | `recipe-analysis` | 未着手   |
-| 3   | `recipe-view`     | 未着手   |
-| 4   | `recipe-list`     | 未着手   |
-| 5   | `recipe-edit`     | 未着手   |
+| #   | feature           | 状態                     |
+| --- | ----------------- | ------------------------ |
+| 0   | `foundation`      | **完了**                 |
+| 1   | `user-auth`       | **完了**                 |
+| 2   | `recipe-analysis` | **設計完了・実装未着手** |
+| 3   | `recipe-view`     | 未着手                   |
+| 4   | `recipe-list`     | 未着手                   |
+| 5   | `recipe-edit`     | 未着手                   |
 
 ---
 
@@ -153,13 +153,22 @@ f61f5ec feat: Auth.js 用に Account モデルと User.emailVerified を schema.
 | `AUTH_GOOGLE_ID`        | 1     | ✅ 設定済み               |
 | `AUTH_GOOGLE_SECRET`    | 1     | ✅ 設定済み               |
 | `AUTH_SECRET`           | 1     | ✅ 設定済み               |
-| `ANTHROPIC_API_KEY`     | 2     | ❌ **空。Phase 2 で必要** |
-| `AWS_ACCESS_KEY_ID`     | 2     | ❌ **空。Phase 2 で必要** |
-| `AWS_SECRET_ACCESS_KEY` | 2     | ❌ **空。Phase 2 で必要** |
+| `ANTHROPIC_API_KEY`     | 2     | ✅ 設定済み（2026-08-15） |
+| `AWS_ACCESS_KEY_ID`     | 2     | ✅ 設定済み（2026-08-15） |
+| `AWS_SECRET_ACCESS_KEY` | 2     | ✅ 設定済み（2026-08-15） |
 | `AWS_REGION`            | 2     | ✅ 設定済み               |
-| `S3_BUCKET_NAME`        | 2     | ❌ **空。Phase 2 で必要** |
+| `S3_BUCKET_NAME`        | 2     | ✅ 設定済み（2026-08-15） |
 
-> **⚠️ Phase 2 はユーザーの手作業を待つ必要がある。** Anthropic API キーの取得と AWS S3 バケットの作成が済んでいないと、実装しても動作確認ができない。**着手前に `SETUP.md` の Phase 2 を案内し、4つの変数が埋まるのを待つこと。** 設計とスキーマの作業は待たずに進められる。
+**Phase 2 に必要な環境変数はすべて揃っている。** ユーザー側の手作業待ちは無い。
+
+> **⚠️ `.env` はリモート実行環境（Claude Code on the web）には届かない。** `.gitignore` 済みのため、ユーザーのローカルにしか存在しない。リモート側の `.env` はビルドを通すためのダミー値。
+>
+> **したがって Phase 2 の「実際に Claude API / S3 を叩く確認」はローカルでしかできない。** Phase 1 の Google ログイン確認と同じ構図。
+>
+> | リモートでできる                    | ローカルでしかできない             |
+> | ----------------------------------- | ---------------------------------- |
+> | 実装 / 型チェック / テスト / ビルド | 実際の画像解析、S3へのアップロード |
+> | モックを使ったテスト                | 読み取り精度と分類の妥当性の評価   |
 
 環境変数の充足状況を自分で確認するコマンド（**値は表示せず、設定済みかどうかだけ出す**）:
 
@@ -183,16 +192,20 @@ cd /c/recipe-app && while IFS= read -r line; do case "$line" in ''|'#'*) continu
 
 **記憶で設計を書かないこと。** `.kiro/README.md` の「design.md の書き方」に従い、**出典を書けない事実は書かない**。
 
-1. **Claude API のモデルIDと制約値。** `claude-api` skill を使う。**記憶で書かない**（`CLAUDE.md` の Non-obvious constraints）。画像1枚あたりのサイズ上限、長辺のピクセル数、料金は必ず出典を示す
-2. **`sharp` が Vercel で動くか。** ネイティブバイナリを含むため、Vercel のランタイムとの相性を確認する。`.rotate()` を呼ばないと EXIF 回転が適用されない点も要注意（`CLAUDE.md`）
-3. **AWS SDK v3 の S3 クライアントの書き方。** インストールした実物を確認する
+1. ~~**Claude API のモデルIDと制約値**~~ → **✅ 2026-08-15 完了。** モデルは `claude-opus-5`、画像は10MB / 長辺2576px。詳細と出典は `.kiro/specs/recipe-analysis/design.md` の1.1〜1.4
+2. **⚠️ `sharp` が Vercel で動くか。** 未検証。ネイティブバイナリを含むため相性を確認する。**着手時の最優先事項**（design.md 1.5）
+3. **⚠️ AWS SDK v3 の S3 クライアントの書き方。** 未検証。インストールした実物を確認する（design.md 1.6）
 4. **Route Handler での `UnauthorizedError` → 401 変換。** Phase 1 からの持ち越し（1章）。レスポンス形式は `.kiro/steering/architecture.md` の `{ success, data, error }`
+
+### 設計は完了している
+
+`.kiro/specs/recipe-analysis/` に `requirements.md` と `design.md` がある。**`tasks.md` はまだ無い。** 段階の切り方は `sharp` の Vercel 対応（上記2）が判明してから決めるほうが正確なため、着手時に書く。
 
 ### 既に決まっていること（`CLAUDE.md` の Non-obvious constraints）
 
 **蒸し返さない。**
 
-- 画像はクライアント（Canvas）とサーバー（sharp）の両方で長辺1568px / JPEG品質85に正規化する
+- 画像はクライアント（Canvas）とサーバー（sharp）の両方で **長辺2576px** / JPEG品質85に正規化する（**1568px は Claude 4.6 以前の標準ティアの値。古い記述を見たら疑う**）
 - **S3 に保存するのは変換後の画像のみ。** 元画像は保持しない
 - **HEIC は MVP 非対応。** 選択されたら明示的にエラーを返す
 - **解析結果は確認画面を出す前に保存する。** 確認画面での離脱でAPIコストを失わないため
