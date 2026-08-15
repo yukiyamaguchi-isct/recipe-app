@@ -117,19 +117,31 @@
 
 ## 段階4: Claude API にレシピ画像を送り構造化データを受け取る `lib/clients/claude.ts` を追加する
 
-- [ ] Zod スキーマ（`title` / `ingredients[]` / `steps[]` / `isRecipe`）を定義する
-- [ ] `messages.parse()` で `output_config: { effort: "low", format: zodOutputFormat(...) }` を送る
-- [ ] クライアントを `timeout: 50_000`（**ミリ秒**）/ `maxRetries: 0` で作る
-- [ ] **画像ブロックをテキストブロックより前に置く**（落とし穴 #11）
-- [ ] `temperature` / `top_p` / `top_k` を送らない（落とし穴 #1）
-- [ ] `stop_reason === "refusal"` で `AnalysisRefusedError` を投げる
-- [ ] `parsed_output` が `null` なら `AnalysisFailedError` を投げる
-- [ ] `isRecipe: false` なら `AnalysisFailedError` を投げる
-- [ ] プロンプトを書く（design.md 5.2。**形式の指示は書かない**）
-- [ ] テスト: 拒否時に投げる / `parsed_output` が null で投げる / **Zod の `Category` 3値が Prisma の enum と一致する**
-- [ ] **API を実際に叩くテストは書かない**（design.md 8章）
+- [x] Zod スキーマ（`title` / `ingredients[]` / `steps[]` / `isRecipe`）を定義する
+- [x] `messages.parse()` で `output_config: { effort: "low", format: zodOutputFormat(...) }` を送る
+- [x] クライアントを `timeout: 50_000`（**ミリ秒**）/ `maxRetries: 0` で作る
+- [x] **画像ブロックをテキストブロックより前に置く**（落とし穴 #11）
+- [x] `temperature` / `top_p` / `top_k` を送らない（落とし穴 #1）
+- [x] `stop_reason === "refusal"` で `AnalysisRefusedError` を投げる
+- [x] `parsed_output` が `null` なら `AnalysisFailedError` を投げる
+- [x] `isRecipe: false` なら `AnalysisFailedError` を投げる
+- [x] プロンプトを書く（design.md 5.2。**形式の指示は書かない**）
+- [x] テスト: 拒否時に投げる / `parsed_output` が null で投げる / **Zod の `Category` 3値が Prisma の enum と一致する**
+- [x] **API を実際に叩くテストは書かない**（design.md 8章）
+- [x] `max_tokens` を 16000 に訂正し、`thinking` を切らない方針を design.md に反映する
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` が終了コード0
+
+### 実施時の記録
+
+- **`claude-api` skill から design.md への訂正が1件出た。`max_tokens: 8000` では足りない。** `max_tokens` は thinking と本文の**合計**への上限で、Opus 5 は thinking が既定でON。skill の推奨は非ストリーミングで ~16000。**下げすぎると `stop_reason: "max_tokens"` で本文が切れ、structured outputs のパースに失敗して `parsed_output` が null になる**（原因が「画像が読めない」に見えてしまう）。16000 に直し、両者を別の `cause` で投げ分けた
+- **`thinking` を切ってはいけないことが分かった。** Opus 5 で `thinking: {type:"disabled"}` にすると、(1) tool 呼び出しが本文テキストとして出て**エラーも出ずに実行されない**、(2) `<thinking>` タグが画面向けの本文に漏れる、の2つが起きる。コストを下げたいときは **`thinking` ではなく `effort` を下げる**。落とし穴 #15 として記録。**このフェーズでは `thinking` を一切指定しない**
+- **`stop_details` で分岐してはいけない。** 拒否であっても `null` になりうる。分岐は `stop_reason` で行い、`stop_details` は `cause`（調査用）にだけ使う。落とし穴 #16
+- **Zod の enum を Prisma の生成物から作った。** `import { Category } from "@/generated/prisma/client"` して `z.enum(Category)`。zod 4 の `z.enum()` が const オブジェクトを受けることを実物で確認済み。**文字列で並べ直すとズレても保存の段階まで気づけない**ため、構造的に不可能にした（落とし穴 #17）
+- **ズレ検出テストが効くことを確認した。** `z.enum(Category)` を `z.enum(["SEASONING", "VEGETABLE"])` にすると `expected [ 'SEASONING', 'VEGETABLE' ] to deeply equal [ 'OTHER', 'SEASONING', 'VEGETABLE' ]` で落ちる。確認後に戻した
+- **SDK のエラークラスは `Anthropic.APIConnectionTimeoutError`**（実測で確認。名前付き export と static の両方から取れる）。テストでは SDK 本体をモックしつつ**エラークラスだけ実物を残した**。偽物にすると `instanceof` が素通りして、変換されていないことに気づけない
+- **クライアントは遅延生成にした。** モジュール読み込み時に `new Anthropic()` すると、`ANTHROPIC_API_KEY` が無い環境で import しただけで落ちる可能性がある
+- **⚠️ 未対応: 拒否時の fallback。** skill は Opus 5 で `fallbacks` パラメータ（beta）を既定で入れることを推奨している。今回は入れていない。理由は (1) 料理写真で分類器が発火する見込みが低い、(2) beta ヘッダと別モデルへの課金が増える、(3) `ANALYSIS_REFUSED` の文言で撮り直しは案内できる。**段階12 で実際に拒否が出るようなら、ユーザーに確認してから導入する**
 
 ---
 

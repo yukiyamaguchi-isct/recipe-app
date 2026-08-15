@@ -123,9 +123,32 @@ if (!response.parsed_output) throw new AnalysisFailedError();
 | `max_tokens`                      | **thinking と本文の合計に対する上限。** thinking ON なら余裕を持たせる |
 | `effort`                          | `output_config.effort` に入れる。トップレベルではない                  |
 
-**effort は `low` から始める。** Opus 5 は `low` / `medium` が同世代比で強く、レシピの読み取りと3分類は極端に難しい推論ではない。**⚠️ 実測で精度が足りなければ上げる**（段階12）。
+**effort は `low` から始める。** Opus 5 は `low` / `medium` が同世代比で強く、レシピの読み取りと3分類は極端に難しい推論ではない。**API の既定は `high` なので、これは明示的に下げている。⚠️ 実測で精度が足りなければ上げる**（段階12）。
 
 **`stop_reason: "refusal"` を必ず見る。** Opus 5 は安全性分類器が働き、HTTP 200 のまま `content` が空で返ることがある。料理の写真で発火する見込みは低いが、`content[0]` を無条件に読むコードは壊れる。
+
+### ⚠️ 訂正: `max_tokens` は 8000 では足りない（📄 出典: `claude-api` skill、段階4で発覚）
+
+**初版の 5.1 は `max_tokens: 8000` としていたが、これは本文の長さだけを見た値だった。**
+
+`max_tokens` は **thinking と本文の合計**に対する上限で、Opus 5 は thinking が既定でONになる。skill の推奨は「非ストリーミングは ~16000 を既定にし、安易に下げない」。**下げすぎると `stop_reason: "max_tokens"` で本文が途中で切れ、structured outputs のパースに失敗して `parsed_output` が null になる。**
+
+**見分け方**: 解析が `ANALYSIS_FAILED` になったとき `stop_reason` を見る。`max_tokens` なら画像の問題ではなく上限の問題。実装では両者を別の `cause` で投げ分けてある。
+
+### ⚠️ `thinking` を切ってはいけない（📄 出典: `claude-api` skill）
+
+`thinking: {type:"disabled"}` は effort `high` 以下なら400にはならないが、**Opus 5 で切ると別の不具合が2つ出る。**
+
+| 症状                                          | 何が起きるか                                                   |
+| --------------------------------------------- | -------------------------------------------------------------- |
+| tool 呼び出しが**本文テキストとして**出る     | ターンは正常終了し、呼び出しは実行されない。**エラーも出ない** |
+| `<thinking>` タグが**画面向けの本文に漏れる** | ユーザーに内部タグが見える                                     |
+
+コストとレイテンシを下げたいなら **`thinking` を切るのではなく `effort` を下げる**のが正しい手段。**このフェーズでは `thinking` を一切指定しない**（既定のONのまま使う）。
+
+### `stop_details` で分岐しない（📄 出典: `claude-api` skill）
+
+`stop_details` は `stop_reason === "refusal"` のときだけ入る補助情報で、**拒否であっても `null` になりうる**。分岐は必ず `stop_reason` で行い、`stop_details` は原因調査（`cause`）にだけ使う。
 
 ## 1.4 SDK のタイムアウトは**ミリ秒**（📄 出典: `claude-api` skill）
 
@@ -357,9 +380,9 @@ const client = new Anthropic({
 ```ts
 const response = await client.messages.parse({
   model: "claude-opus-5",
-  max_tokens: 8000, // thinking と本文の合計に対する上限
+  max_tokens: 16000, // ⚠️ thinking と本文の合計に対する上限。8000 では足りない（1.3 の訂正）
   output_config: {
-    effort: "low", // ⚠️ 精度が足りなければ上げる
+    effort: "low", // ⚠️ 精度が足りなければ上げる。API の既定は "high"
     format: zodOutputFormat(RecipeSchema),
   },
   // temperature / top_p / top_k は送らない（送ると400）
@@ -590,6 +613,10 @@ export class AppError extends Error {
 | 11  | 画像をテキストブロックの後に置く                        | 精度が落ちる                                                                                  | 5.1             |
 | 12  | zod 3 を入れる                                          | `helpers/zod` は `zod/v4` を見るため書き味がずれる                                            | 1.7             |
 | 13  | 「build が通ったから sharp は Vercel で動く」と考える   | import しなければバンドルされない。**通って当然**                                             | 1.5             |
+| 14  | `max_tokens` を本文の長さだけで見積もる                 | thinking と合算されるため出力が途中で切れ、パースに失敗する                                   | 1.3             |
+| 15  | コスト削減のつもりで `thinking` を切る                  | tool 呼び出しが本文テキストとして出る／`<thinking>` が漏れる。**下げるなら effort**           | 1.3             |
+| 16  | `stop_details` の有無で拒否を判定する                   | 拒否でも `null` になりうるため取りこぼす                                                      | 1.3             |
+| 17  | Zod の enum を文字列で並べ直す                          | `schema.prisma` とズレても保存の段階まで気づけない                                            | 5.1             |
 
 ## 9.1 環境側で踏んだもの（Phase 2 着手時に実際に踏んだ）
 
