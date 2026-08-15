@@ -94,7 +94,7 @@ tasks.md の記録自体は消さない（どの段階で何が分かったか�
 | #   | feature           | 内容                                               | 状態     |
 | --- | ----------------- | -------------------------------------------------- | -------- |
 | 0   | `foundation`      | Next.js雛形、Prisma+Neon接続、Prettier、Vitest     | **完了** |
-| 1   | `user-auth`       | Googleアカウント認証（Auth.js）、セッション（JWT） | 未着手   |
+| 1   | `user-auth`       | Googleアカウント認証（Auth.js）、セッション（JWT） | **完了** |
 | 2   | `recipe-analysis` | 画像アップロード→リサイズ→S3→Claude解析→保存       | 未着手   |
 | 3   | `recipe-view`     | レシピ表示（確認モード / 通常モード）              | 未着手   |
 | 4   | `recipe-list`     | 一覧、空状態、削除                                 | 未着手   |

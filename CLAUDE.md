@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-**Phase 0（foundation）完了 / Phase 1（user-auth）未着手**（2026-08-13 時点）。
+**Phase 1（user-auth）完了 / Phase 2（recipe-analysis）未着手**（2026-08-15 時点）。
 
-ツールチェーン（Next.js 16 / Prisma 7 + Neon / Prettier / Vitest）は動く状態にあるが、**アプリの機能コードはまだ無い**。`app/page.tsx` は create-next-app の初期ページのまま。
+Google アカウントでログインでき、未ログインでは保護されたページを開けない。**実機で確認済み。** レシピに関する機能はまだ無い。
 
 **セッションを引き継いだ場合は `HANDOVER.md` を最初に読むこと。** 現在地・未決事項・次の作業がまとまっている。
 
@@ -22,13 +22,15 @@ recipe-app/
 ├── UI_DESIGN.md               # UI設計（画面一覧・遷移・各画面の設計・決定事項）
 ├── SETUP.md                   # 開発者が手動でやる作業（外部サービス登録・キー取得）
 ├── .kiro/                     # Kiroフレームワーク。実装の「記憶」
-│   ├── README.md              # .kiroの使い方と実装フェーズ一覧
+│   ├── README.md              # .kiroの使い方、design.mdの書き方、実装フェーズ一覧
 │   ├── steering/              # 技術スタックとアーキテクチャ方針
 │   └── specs/<feature>/       # 機能ごとの requirements / design / tasks
-├── app/                       # layout / page（初期状態）、api/ は空
-├── lib/                       # prisma.ts のみ。services / repositories / clients は空
-├── prisma/                    # schema.prisma と初回マイグレーション
-├── __tests__/                 # 疎通確認用のテスト2本
+├── auth.ts                    # Auth.js の設定
+├── proxy.ts                   # 未ログイン時の先回りリダイレクト
+├── app/                       # login / ホーム / api/auth
+├── lib/                       # prisma.ts, errors.ts, auth/session.ts
+├── prisma/                    # schema.prisma とマイグレーション2本
+├── __tests__/                 # テスト19件
 ├── kiro-personal-app-guide.md      # Kiroフレームワークの参考ガイド
 ├── kiro-ai-prompts-template.md     # 同上（プロンプト集）
 └── CLAUDE.md
@@ -36,7 +38,15 @@ recipe-app/
 
 ### 次にやること
 
-**Phase 1（user-auth）**。着手前に `AUTH_SECRET` の生成（`SETUP.md` の Phase 1）と、Auth.js の Next.js 16 対応状況の調査が必要。詳細は `HANDOVER.md` の4章。
+**Phase 2（recipe-analysis）**。着手前に以下が必要。詳細は `HANDOVER.md` の4章。
+
+- **ユーザーの手作業**: `ANTHROPIC_API_KEY` / AWS S3 の3変数（`SETUP.md` の Phase 2）
+- **ブランチ方針の確認**: Phase 1 のブランチが `main` にマージされていない（`HANDOVER.md` 1章末尾）
+- **調査**: Claude API のモデルIDと制約値（`claude-api` skill）、`sharp` の Vercel 対応
+
+### 認証まわりの落とし穴
+
+Phase 1 で踏んだものが `.kiro/specs/user-auth/design.md` の**8章に一覧**でまとまっている。認証に触る前に読むこと。特に **`proxy.ts` は単体では何も保護しない**（`authorized` コールバックが要る）点は、壊してもエラーが出ないので注意。
 
 ## Read the design docs first
 
