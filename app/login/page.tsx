@@ -3,18 +3,25 @@ import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
 
 // Auth.js は失敗時に /login?error=<code> へ戻す（auth.ts の pages.error）。
-// code は @auth/core の SignInPageErrorParam / ErrorPageParam。
-// Google のみの構成で実際に出うるものだけを訳し、原因と次の行動を書く（UI_DESIGN.md S-01）。
+// 対応表の根拠と、キャンセルが Configuration で届く理由は design.md 6.1 / 1.8 を参照。
 const ERROR_MESSAGES: Record<string, string> = {
-  AccessDenied:
-    "ログインをキャンセルしました。もう一度お試しください。Googleの画面で「続行」を押すとログインできます。",
+  // ⚠️ Configuration は「設定不備」専用ではなく、クライアントに見せてよいエラー以外の
+  // 受け皿（@auth/core の index.ts L185-186）。**Google の同意画面でのキャンセルもここに来る。**
+  // 原因を断定できないため、まず再試行を促し、続く場合に管理者へ誘導する。
   Configuration:
-    "サーバー側の設定に問題があり、ログインを開始できませんでした。時間をおいて試しても直らない場合は、管理者にお問い合わせください。",
+    "ログインを完了できませんでした。キャンセルした場合は、もう一度お試しください。繰り返し表示される場合は、管理者にお問い合わせください。",
+
+  // signIn コールバックが false を返したときのみ。現状このアプリでは使っていない
+  AccessDenied: "ログインが許可されませんでした。別のアカウントでお試しください。",
+
   OAuthSignin: "Googleとの通信に失敗しました。通信環境を確認して、もう一度お試しください。",
-  OAuthCallbackError: "Googleとの通信に失敗しました。通信環境を確認して、もう一度お試しください。",
-  Callback: "Googleとの通信に失敗しました。通信環境を確認して、もう一度お試しください。",
+  OAuthCallbackError: "ログインを完了できませんでした。もう一度お試しください。",
+  Callback: "ログインを完了できませんでした。もう一度お試しください。",
+
+  // DB へのユーザー作成に失敗。スキーマ不足があるとここに来る（design.md 1.5 / 1.6）
   OAuthCreateAccount:
     "アカウントの作成に失敗しました。時間をおいて試しても直らない場合は、管理者にお問い合わせください。",
+
   OAuthAccountNotLinked:
     "このメールアドレスは別の方法で登録されています。最初に使ったアカウントでログインしてください。",
   SessionRequired: "この操作にはログインが必要です。ログインしてください。",

@@ -172,6 +172,58 @@ else if (!authorized) {
 - リダイレクト先は `pages.signIn`（= `/login`）で、**`callbackUrl` が自動で付く**
 - `/login` 自身も `authorized` が `false` になるが、`pathname !== signInPage` のガードで無限ループにならない
 
+## 1.8 Google のキャンセルは `Configuration` として届く（📄 出典＋✅ 実測）
+
+**直感に反するので注意。** 「同意画面でキャンセル ＝ `AccessDenied`」ではない。
+
+### `Configuration` は設定不備専用ではない
+
+```js
+// @auth/core/src/index.ts L185-186
+const isClientSafeErrorType = isClientError(error);
+const type = isClientSafeErrorType ? error.type : "Configuration";
+```
+
+**クライアントに見せてよいエラー以外は、すべて `Configuration` に丸められる。** 見せてよい側は8種類だけ（`errors.ts` L486-495）。
+
+```
+CredentialsSignin / OAuthAccountNotLinked / OAuthCallbackError / AccessDenied
+Verification / MissingCSRF / AccountNotLinked / WebAuthnVerificationError
+```
+
+`CallbackRouteError` はここに入っていないため `Configuration` になる。
+
+### キャンセルが `CallbackRouteError` になる理由
+
+`oauth4webapi` の `validateAuthResponse` は**チェックの順序**が決定的。
+
+```js
+// node_modules/oauth4webapi/build/index.js
+L2065  if (!iss && as.authorization_response_iss_parameter_supported) {
+L2066    throw OPE('response parameter "iss" (issuer) missing', ...)   // ← ここで止まる
+...
+L2094  const error = getURLSearchParameter(parameters, 'error');
+L2095  if (error) {
+L2096    throw new AuthorizationResponseError(...)                      // ← 到達しない
+```
+
+`iss` の検査が `error` の判定より前にある。**Google は拒否時のリダイレクトに `iss` を含めないため、`error=access_denied` が読まれる前に例外になる。** `OperationProcessingError` は `AuthorizationResponseError` ではないので `OAuthCallbackError` に変換されず、`CallbackRouteError` のまま上がる。
+
+✅ 実測（Windows / Chrome / 実際の Google アカウントで拒否）:
+
+```
+[auth][error] CallbackRouteError: Read more at https://errors.authjs.dev#callbackrouteerror
+[auth][cause]: OperationProcessingError: response parameter "iss" (issuer) missing
+```
+
+画面には `/login?error=Configuration` として戻る。
+
+### 実装への影響
+
+**`Configuration` の文言は「サーバー側の設定に問題があり」と断定してはいけない。** 最も頻度が高いのは利用者のキャンセルであり、設定不備は稀。まず再試行を促し、繰り返す場合に管理者へ誘導する（6.1）。
+
+> **この事実は実機確認（段階6）で初めて分かった。** 初版の design.md は `AccessDenied` と書いており、そのまま実装したため、キャンセル時に的外れな案内が出ていた。**エラーコードの対応は実機で1つずつ確かめる**こと。
+
 ---
 
 # 2. データモデル
@@ -488,17 +540,26 @@ curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" http://localhost:300
 
 コードの一覧は `@auth/core/src/types.ts` の `SignInPageErrorParam`（L205）と `ErrorPageParam`（L202）。**Google のみの構成で出うるものだけを訳し、表に無いコードは既定の文言に落とす。**
 
-| code                                              | いつ来るか                         | 文言の要点                             |
-| ------------------------------------------------- | ---------------------------------- | -------------------------------------- |
-| `AccessDenied`                                    | **同意画面でキャンセルした**       | キャンセルした旨＋「続行」を押せばよい |
-| `Configuration`                                   | サーバー側の設定不備               | 時間をおいて駄目なら管理者へ           |
-| `OAuthSignin` / `OAuthCallbackError` / `Callback` | Google との通信失敗                | 通信環境を確認して再試行               |
-| `OAuthCreateAccount`                              | **DB へのユーザー作成に失敗**      | 時間をおいて駄目なら管理者へ           |
-| `OAuthAccountNotLinked`                           | 同じメールが別方式で登録済み       | 最初に使ったアカウントで               |
-| `SessionRequired`                                 | 要ログインの画面に未ログインで来た | ログインが必要                         |
-| （上記以外）                                      | —                                  | 既定の文言                             |
+| code                              | いつ来るか                                                           | 文言の要点                               |
+| --------------------------------- | -------------------------------------------------------------------- | ---------------------------------------- |
+| `Configuration`                   | **同意画面でキャンセルした**（✅ 実測）／ 設定不備 ／ その他の受け皿 | まず再試行を促し、繰り返す場合に管理者へ |
+| `AccessDenied`                    | `signIn` コールバックが `false` を返した（**現状は未使用**）         | 別のアカウントで                         |
+| `OAuthSignin`                     | Google との通信失敗                                                  | 通信環境を確認して再試行                 |
+| `OAuthCallbackError` / `Callback` | コールバック処理の失敗                                               | もう一度お試しください                   |
+| `OAuthCreateAccount`              | **DB へのユーザー作成に失敗**                                        | 時間をおいて駄目なら管理者へ             |
+| `OAuthAccountNotLinked`           | 同じメールが別方式で登録済み                                         | 最初に使ったアカウントで                 |
+| `SessionRequired`                 | 要ログインの画面に未ログインで来た                                   | ログインが必要                           |
+| （上記以外）                      | —                                                                    | 既定の文言                               |
+
+> **⚠️ キャンセルは `AccessDenied` ではなく `Configuration` で届く（1.8）。** この行を「設定不備」だけの想定で書き換えないこと。
 
 > **`OAuthCreateAccount` が出たらスキーマを疑う。** 1.5 のとおり型では捕まらないスキーマ不足が、実行時にここへ落ちる。
+
+### この対応表の限界
+
+`Configuration` が受け皿である以上、**「利用者がキャンセルした」と「本当に設定が壊れている」を画面上で区別できない。** `iss` の検査を無効化すれば区別できるが、RFC 9207 のミックスアップ攻撃対策を捨てることになるため採らない。
+
+**切り分けはサーバーログで行う。** `[auth][cause]` に `"iss" (issuer) missing` と出ていればキャンセル、それ以外なら実際の障害。
 
 ## 6.2 ホーム（`/`）
 
@@ -566,17 +627,18 @@ expect(Object.keys(Prisma.AccountScalarFieldEnum)).toEqual([
 
 **実装中に踏んだもの・踏みかけたものを一箇所に集めた。** 新しく入る人はここだけ先に読んでもよい。
 
-| #   | 落とし穴                                         | 症状                                  | 対処      |
-| --- | ------------------------------------------------ | ------------------------------------- | --------- |
-| 1   | `proxy.ts` だけ置いて `authorized` を書かない    | 保護されないが**エラーも出ない**      | 1.7 / 4.1 |
-| 2   | `User.emailVerified` を作らない                  | 初回ログインだけ失敗。型は通る        | 1.6 / 2章 |
-| 3   | `Account` のフィールド名を camelCase にする      | `linkAccount` が実行時に落ちる        | 2章       |
-| 4   | `JWT` を `next-auth/jwt` に対して拡張する        | `TS2322: Type '{}' is not assignable` | 4.2       |
-| 5   | `export { GET, POST } from "@/auth"`             | 解決しない                            | 4.3       |
-| 6   | `next-auth` をキャレット付きで入れる             | beta 間の破壊的変更を自動で踏む       | 1.1       |
-| 7   | matcher から静的アセットを除外し忘れる           | CSS / JS / 画像が読めない             | 4.4       |
-| 8   | `searchParams` を `await` せずに読む             | Next.js 16 で型エラー                 | 6.1       |
-| 9   | Auth.js のドキュメントを `middleware` のまま写す | proxy として認識されない              | 1.3       |
+| #   | 落とし穴                                         | 症状                                                                             | 対処      |
+| --- | ------------------------------------------------ | -------------------------------------------------------------------------------- | --------- |
+| 1   | `proxy.ts` だけ置いて `authorized` を書かない    | 保護されないが**エラーも出ない**                                                 | 1.7 / 4.1 |
+| 2   | `User.emailVerified` を作らない                  | 初回ログインだけ失敗。型は通る                                                   | 1.6 / 2章 |
+| 3   | `Account` のフィールド名を camelCase にする      | `linkAccount` が実行時に落ちる                                                   | 2章       |
+| 4   | `JWT` を `next-auth/jwt` に対して拡張する        | `TS2322: Type '{}' is not assignable`                                            | 4.2       |
+| 5   | `export { GET, POST } from "@/auth"`             | 解決しない                                                                       | 4.3       |
+| 6   | `next-auth` をキャレット付きで入れる             | beta 間の破壊的変更を自動で踏む                                                  | 1.1       |
+| 7   | matcher から静的アセットを除外し忘れる           | CSS / JS / 画像が読めない                                                        | 4.4       |
+| 8   | `searchParams` を `await` せずに読む             | Next.js 16 で型エラー                                                            | 6.1       |
+| 9   | Auth.js のドキュメントを `middleware` のまま写す | proxy として認識されない                                                         | 1.3       |
+| 10  | キャンセル時の code を `AccessDenied` と想定する | 実際は `Configuration`。「サーバー側の設定に問題があり」という的外れな案内が出る | 1.8 / 6.1 |
 
 ---
 
@@ -584,17 +646,17 @@ expect(Object.keys(Prisma.AccountScalarFieldEnum)).toEqual([
 
 **「動くこと」ではなく、外から観測できる形で書く。** requirements.md の受け入れ基準と対応する。
 
-| #   | 手順                                      | 期待される観測結果                               | Req  |
-| --- | ----------------------------------------- | ------------------------------------------------ | ---- |
-| 1   | 未ログインで `/` を開く                   | 307 → `/login?callbackUrl=...`                   | Req3 |
-| 2   | `proxy.ts` を退避して 1 を再実行          | 307 → `/login`（`callbackUrl` なし）             | 5.2  |
-| 3   | 「Googleでログイン」を押す                | Google の同意画面に遷移                          | Req1 |
-| 4   | 承認する                                  | `/` に戻り、自分の名前が表示される               | Req1 |
-| 5   | `npx prisma studio` で確認                | `User` 1件 / `Account` 1件                       | Req1 |
-| 6   | ログアウト → 再度同じアカウントでログイン | `User` が**増えない**（1件のまま）               | Req1 |
-| 7   | ログイン済みで `/login` を開く            | `/` にリダイレクト                               | Req3 |
-| 8   | 同意画面でキャンセル                      | `/login?error=AccessDenied` で日本語のメッセージ | Req5 |
-| 9   | ログアウト後に `/` を開く                 | `/login` にリダイレクト                          | Req2 |
+| #   | 手順                                      | 期待される観測結果                                                                    | Req  |
+| --- | ----------------------------------------- | ------------------------------------------------------------------------------------- | ---- |
+| 1   | 未ログインで `/` を開く                   | 307 → `/login?callbackUrl=...`                                                        | Req3 |
+| 2   | `proxy.ts` を退避して 1 を再実行          | 307 → `/login`（`callbackUrl` なし）                                                  | 5.2  |
+| 3   | 「Googleでログイン」を押す                | Google の同意画面に遷移                                                               | Req1 |
+| 4   | 承認する                                  | `/` に戻り、自分の名前が表示される                                                    | Req1 |
+| 5   | `npx prisma studio` で確認                | `User` 1件 / `Account` 1件                                                            | Req1 |
+| 6   | ログアウト → 再度同じアカウントでログイン | `User` が**増えない**（1件のまま）                                                    | Req1 |
+| 7   | ログイン済みで `/login` を開く            | `/` にリダイレクト                                                                    | Req3 |
+| 8   | 同意画面でキャンセル                      | `/login?error=Configuration` で日本語のメッセージ（**`AccessDenied` ではない**。1.8） | Req5 |
+| 9   | ログアウト後に `/` を開く                 | `/login` にリダイレクト                                                               | Req2 |
 
 Route Handler の 401 変換（Req4 の一部）は Phase 2 に持ち越し（4.6）。
 

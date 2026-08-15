@@ -46,12 +46,21 @@ describe("S-01 ログイン", () => {
     expect(container.querySelector("input")).toBeNull();
   });
 
+  // Google の同意画面でキャンセルすると Configuration で戻ってくる（design.md 1.8）。
+  // AccessDenied ではない。ここを取り違えると「サーバー側の設定に問題があり」という
+  // 的外れな案内が出る（実機確認で発覚した）。
   it("キャンセルしたときは原因と次の行動が表示される", async () => {
-    render(await renderLoginPage({ error: "AccessDenied" }));
+    render(await renderLoginPage({ error: "Configuration" }));
 
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toContain("キャンセル");
     expect(alert.textContent).toContain("もう一度お試しください");
+  });
+
+  it("キャンセル時の文言はサーバーの設定不備と断定しない", async () => {
+    render(await renderLoginPage({ error: "Configuration" }));
+
+    expect(screen.getByRole("alert").textContent).not.toContain("設定に問題");
   });
 
   it("想定外のエラーコードでも既定のメッセージが表示される", async () => {
