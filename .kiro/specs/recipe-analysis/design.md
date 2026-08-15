@@ -422,10 +422,37 @@ const STATUS: Record<string, number> = {
   IMAGE_TOO_LARGE: 413,
   UNSUPPORTED_FORMAT: 415,
   ANALYSIS_FAILED: 422,
+  // 拒否も「リクエストは正しいが内容を処理できない」なので ANALYSIS_FAILED と同じ 422。
+  ANALYSIS_REFUSED: 422,
   ANALYSIS_TIMEOUT: 504,
   STORAGE_FAILED: 502,
 };
 ```
+
+> **✅ 実測（段階2）: 初版のこの表には `ANALYSIS_REFUSED` が抜けていた。** 7章のエラー表には載っているのに 5.4 の対応表に無く、そのまま実装すると**拒否だけ 500 になる**ところだった。対応表に無いコードは 500 にフォールバックするため、**型でもテストでも捕まらない**。同じ抜けを繰り返さないよう、`lib/errors.ts` の全エラーが対応表に載っていることをテストで固定した（`__tests__/api-response.test.ts`）。
+
+## 5.5 内部情報を `cause` に隔離する（✅ 実測 2026-08-15）
+
+**`error.message` はユーザーにそのまま出る**（`.kiro/steering/architecture.md`）。一方で、原因調査には外部APIの生メッセージが要る。両立させるため、`AppError` に `cause` を持たせた。
+
+```ts
+// lib/errors.ts
+export class AppError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.code = code;
+    this.name = new.target.name;
+  }
+}
+```
+
+- **`message`** — 固定の日本語。各サブクラスがコンストラクタで持ち、呼び出し側は差し替えられない
+- **`cause`** — 外部APIの例外。`errorResponse()` が `console.error` に出すだけで、**レスポンスの body には載せない**
+
+**見分け方**: `StorageFailedError` にバケット名入りの `cause` を渡し、レスポンスの JSON 文字列にバケット名が含まれないこと。含まれていれば漏れている。
+
+**無いとどうなるか**: `new StorageFailedError(s3Error.message)` のような書き方が自然に見えてしまい、`Access Denied: bucket recipe-app-prod-images` がそのまま画面に出る。**サブクラスに message を受け取らせない**ことで、この書き方自体を不可能にしている。
 
 ---
 
@@ -468,8 +495,12 @@ const STATUS: Record<string, number> = {
 | `ANALYSIS_REFUSED`   | `stop_reason: "refusal"`       | 解析できない画像である旨。**内部の分類理由は出さない** |
 | `STORAGE_FAILED`     | S3 失敗                        | 保存に失敗した旨と再試行                               |
 | `UNAUTHORIZED`       | 未ログイン                     | ログインが必要                                         |
+| `INVALID_IMAGE`      | 画像として読めない・壊れている | 壊れていないか確認して再試行                           |
+| `INTERNAL_ERROR`     | **上記以外のすべて**           | 原因を明かさない固定文言。500                          |
 
-**内部エラーの詳細を画面に出さない。** スタックトレース、APIキー、S3のバケット名などは `error.message` に載せない。
+**内部エラーの詳細を画面に出さない。** スタックトレース、APIキー、S3のバケット名などは `error.message` に載せない。仕組みは 5.5。
+
+**`INTERNAL_ERROR` は `lib/errors.ts` に無い。** `AppError` を継承しない例外（外部ライブラリが投げたもの）に `errorResponse()` が付ける受け皿で、**中身を一切見ずに**固定文言を返す。Phase 1 の `Configuration` と同じ考え方（「クライアントに見せてよいエラー以外の受け皿」）。
 
 ---
 

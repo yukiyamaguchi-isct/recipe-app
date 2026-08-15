@@ -69,13 +69,23 @@
 
 **Phase 1 からの持ち越し**（requirements.md Req7 / `HANDOVER.md` 1章）。`UnauthorizedError` → 401 の変換をここで実装する。
 
-- [ ] `lib/errors.ts` に Phase 2 のエラーを追加する（`InvalidImageError` / `ImageTooLargeError` / `UnsupportedFormatError` / `AnalysisFailedError` / `AnalysisTimeoutError` / `AnalysisRefusedError` / `StorageFailedError`）
-- [ ] `lib/api-response.ts` に成功・失敗のレスポンス組み立てを追加する（`.kiro/steering/architecture.md` の形）
-- [ ] design.md 5.4 の `STATUS` 表のとおりにコードとステータスを対応させる
-- [ ] **内部エラーの詳細（スタックトレース / APIキー / バケット名）が `error.message` に載らないこと**をテストで固定する
-- [ ] 各エラーが期待する HTTP ステータスに変換されることをテストする
+- [x] `lib/errors.ts` に Phase 2 のエラーを追加する（`InvalidImageError` / `ImageTooLargeError` / `UnsupportedFormatError` / `AnalysisFailedError` / `AnalysisTimeoutError` / `AnalysisRefusedError` / `StorageFailedError`）
+- [x] `lib/api-response.ts` に成功・失敗のレスポンス組み立てを追加する（`.kiro/steering/architecture.md` の形）
+- [x] design.md 5.4 の `STATUS` 表のとおりにコードとステータスを対応させる
+- [x] **内部エラーの詳細（スタックトレース / APIキー / バケット名）が `error.message` に載らないこと**をテストで固定する
+- [x] 各エラーが期待する HTTP ステータスに変換されることをテストする
+- [x] design.md 5.4 の抜け（`ANALYSIS_REFUSED`）と 7章の抜け（`INVALID_IMAGE` / `INTERNAL_ERROR`）を補い、5.5 を追加する
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` が終了コード0
+
+### 実施時の記録
+
+- **design.md 5.4 の `STATUS` 表から `ANALYSIS_REFUSED` が抜けていた。** 7章のエラー表には載っているのに対応表に無く、そのまま実装すると拒否だけ 500 になっていた。**対応表に無いコードは 500 にフォールバックするため、型でもテストでも捕まらない**種類の抜け。422 を割り当てた（「リクエストは正しいが内容を処理できない」で `ANALYSIS_FAILED` と同じ性質）
+- 同じ抜けの再発を防ぐため、**`lib/errors.ts` の全エラーが対応表に載っていることをテストで固定した。** `Object.values(errors)` から `AppError` のサブクラスだけを取り出して `statusFor()` が 500 でないことを確認する。Phase 1 のスキーマテストと同じ「型で捕まらないぶんの担保」
+- **このテストが実際に欠落を捕まえることを確認した。** `STORAGE_FAILED: 502` を対応表から一時的に削ると `STORAGE_FAILED が対応表に無い: expected 500 not to be 500` で落ちる。確認後に戻した
+- **`AppError` に `cause` を足した**（design.md 5.5）。`message` はユーザーに出る日本語、`cause` は外部APIの生メッセージでログにだけ出す、と役割を分けた。**Phase 2 のサブクラスは `message` を引数で受け取らない**設計にしてある。`new StorageFailedError(s3Error.message)` という自然に見える書き方を、そもそも書けなくするため
+- `it.each` の書式で詰まった。配列の配列（`[[error, status]]`）に `$code` と `%i` を混ぜるとテスト名が `'STORAGE_FAILED' は NaN を返す` になる。**オブジェクトの配列にして `$error.code` / `$status` で統一した**
+- 既存の `UnauthorizedError` は `message` を引数で受け取る形のまま残した。Phase 1 のコードが呼んでいるため。**Phase 2 のエラーとは書き方が違う**が、意図的
 
 ---
 
