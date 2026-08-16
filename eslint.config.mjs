@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Claude Design から受け取ったデザイン引き継ぎ資料。
+    // 同梱の support.js はプロトタイプ用のバンドル済みスクリプトで、
+    // ReactDOM.render など現行の規約に反する箇所を含む。アプリのコードではなく
+    // 手も入れないため、lint の対象から外す（除外しないと `--max-warnings 0` で落ちる）。
+    "Design_引き継ぎ資料/**",
   ]),
 ]);
 

@@ -23,11 +23,11 @@ export default async function Home() {
       <main className="w-full max-w-sm">
         <h1 className="text-2xl font-semibold tracking-tight">レシピ帳</h1>
 
-        <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-3 text-sm leading-6 text-zinc-600">
           {session.user.name ?? session.user.email} さんでログインしています。
         </p>
 
-        <p className="mt-6 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-6 text-sm leading-6 text-zinc-600">
           レシピの一覧はこの画面に表示されるようになります。写真のアップロードは次のフェーズで追加します。
         </p>
 
@@ -39,7 +39,7 @@ export default async function Home() {
         >
           <button
             type="submit"
-            className="mt-8 flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 text-base font-medium transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+            className="mt-8 flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 text-base font-medium transition-colors hover:bg-black/[.04]"
           >
             ログアウト
           </button>

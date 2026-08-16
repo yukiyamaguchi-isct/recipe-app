@@ -50,7 +50,7 @@ export default async function LoginPage({
         <h1 className="text-2xl font-semibold tracking-tight">レシピ帳</h1>
 
         {/* 何のアプリか分からないまま Google の認証を求めない（UI_DESIGN.md S-01） */}
-        <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-3 text-sm leading-6 text-zinc-600">
           料理本のレシピを撮って保存できるアプリです。写真から材料と作り方を読み取り、材料を「野菜 /
           調味料 / その他」に仕分けします。
         </p>
@@ -58,7 +58,7 @@ export default async function LoginPage({
         {errorMessage && (
           <p
             role="alert"
-            className="mt-6 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+            className="mt-6 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800"
           >
             {errorMessage}
           </p>
@@ -73,13 +73,13 @@ export default async function LoginPage({
         >
           <button
             type="submit"
-            className="mt-8 flex h-12 w-full items-center justify-center rounded-full bg-foreground px-5 text-base font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            className="mt-8 flex h-12 w-full items-center justify-center rounded-full bg-foreground px-5 text-base font-medium text-background transition-colors hover:bg-[#383838]"
           >
             Googleでログイン
           </button>
         </form>
 
-        <p className="mt-4 text-xs leading-5 text-zinc-500 dark:text-zinc-500">
+        <p className="mt-4 text-xs leading-5 text-zinc-500">
           初めての方も、このボタンからそのまま始められます。
         </p>
       </main>

@@ -12,12 +12,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/*
+ * ダークモードは MVP では不要（2026-08-16 デザイン引き継ぎ資料）。
+ * 利用場面が「明るいキッチンで、スマホを台に立てかけて 30〜50cm から見る」ため、
+ * ライト1組のトークンに絞る。create-next-app 由来の
+ * `@media (prefers-color-scheme: dark)` ブロックはここにあったが削除した。
+ */
 
 body {
   background: var(--background);
