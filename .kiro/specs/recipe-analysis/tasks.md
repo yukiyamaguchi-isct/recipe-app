@@ -176,13 +176,22 @@
 - [x] Claude のスキーマとプロンプトに `servings` を追加する
 - [x] `Prisma.RecipeScalarFieldEnum` の列一覧をテストで固定する
 - [ ] **⚠️ ローカルで `npx prisma migrate dev --name add_recipe_servings` を実行し、生成物をコミットに含める**
-- [ ] Recipe / Ingredient / Step を**1トランザクション**で作る
-- [ ] `order` に配列の添字をそのまま入れる（design.md 2章）
-- [ ] `userId` は引数で受け取る。**Repository はセッションを知らない**
-- [ ] `schema.prisma` の変更が不要であることを確認する（design.md 2章の見立ての検証）
-- [ ] テスト: 保存される形を固定する
+- [x] Recipe / Ingredient / Step を**1トランザクション**で作る
+- [x] `order` に配列の添字をそのまま入れる（design.md 2章）
+- [x] `userId` は引数で受け取る。**Repository はセッションを知らない**
+- [x] ~~`schema.prisma` の変更が不要であることを確認する~~ → **見立ては外れた。`servings` の追加が要った**
+- [x] テスト: 保存される形を固定する
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` が終了コード0
+
+### 実施時の記録
+
+- **design.md 2章の「このフェーズでの変更は不要」という見立ては外れた。** デザイン引き継ぎ資料に「材料（4人分）」があり、`servings` の追加が必要になった。**着手前に書いた見立ては、資料が揃うまで確定しない**という例
+- **`$transaction` を書かなかった。** Prisma のネスト書き込み（`recipe.create` の中に `ingredients.create` / `steps.create`）は**自動で1トランザクションになる**。明示的に書くより素直で、材料の途中で失敗してレシピだけ残る状態にもならない
+- `RecipeCreateInput` は `user` のリレーション接続を要求するが、**`RecipeUncheckedCreateInput` なら `userId` を直接渡せる**。`create` は両者の XOR を受けるので、後者を使って素直に書いた
+- **テストは Prisma をモックし、「どんなクエリを組み立てたか」だけを見ている。** `lib/prisma.ts` は `DATABASE_URL` が無いとモジュール評価時に落ちるため、実体を読ませない（Phase 1 の `session.test.ts` と同じ形）
+- **order のテストが効くことを確認した。** `order: index` を `index + 1` にすると `expected [ 1, 2, 3 ] to deeply equal [ +0, 1, 2 ]` で2件落ちる。確認後に戻した
+- **並べ替えをしないことをテストで固定した。** カテゴリ順に並べたくなるが、それは表示側（Phase 3）の仕事。ここでは Claude が返した順序＝原文の順序をそのまま保つ
 
 ---
 
