@@ -197,12 +197,22 @@
 
 ## 段階7: 正規化→解析→S3→保存を1本に繋ぐ `lib/services/recipe-analysis.ts` を追加する
 
-- [ ] design.md 4章の順序で呼ぶ。**S3 は解析の後**（落とし穴 #9）
-- [ ] **Service は HTTP を知らない**（`.kiro/steering/architecture.md`）
-- [ ] テスト: **解析に失敗したとき S3 を呼ばない**（4.1 の順序を固定する）
-- [ ] テスト: 保存まで完了してから戻る（Req4）
+- [x] design.md 4章の順序で呼ぶ。**S3 は解析の後**（落とし穴 #9）
+- [x] **Service は HTTP を知らない**（`.kiro/steering/architecture.md`）
+- [x] テスト: **解析に失敗したとき S3 を呼ばない**（4.1 の順序を固定する）
+- [x] テスト: 保存まで完了してから戻る（Req4）
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` が終了コード0
+
+### 実施時の記録
+
+- **順序のテストが効くことを確認した。** S3 を解析より先に呼ぶ実装に入れ替えると3件落ちる。
+  - `expected [ 'normalize', 'upload', …(2) ] to deeply equal [ 'normalize', 'analyze', …(2) ]`
+  - 「解析に失敗したら S3 を呼ばない」「タイムアウトでも S3 を呼ばない」が `expected "vi.fn()" to not be called at all, but actually been called 1 times`
+  - 確認後に戻した。**落とし穴 #9 は、順序を入れ替えた瞬間に落ちる形で固定できている**
+- **Service には分岐もエラー変換も無い。** 4つを順に呼ぶだけで、`try/catch` すら書いていない。型付きエラーはそのまま上（Route Handler）へ抜ける。**この層でHTTPステータスに変換したくなるが、それは `lib/api-response.ts` の仕事**（段階2）
+- **正規化後の画像を Claude と S3 の両方に渡している。** 同じ Buffer を使い回すので、S3 に置いた画像と Claude が見た画像が必ず一致する。別々に正規化すると品質やEXIFの扱いがズレうる
+- テストでは「Claude に生の画像を渡していない」ことを明示的に確認している（`not.toHaveBeenCalledWith(RAW)`）。正規化を挟み忘れても型では捕まらないため
 
 ---
 
