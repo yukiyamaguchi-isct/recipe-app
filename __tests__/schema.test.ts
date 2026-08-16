@@ -11,6 +11,36 @@ describe("Prisma スキーマ", () => {
   it("材料のカテゴリは調味料・野菜・その他の3種である", () => {
     expect(Object.values(Category)).toEqual(["SEASONING", "VEGETABLE", "OTHER"]);
   });
+
+  // Recipe の列は Claude の出力スキーマ（lib/clients/claude.ts）と対になっている。
+  // 片方だけ変えても型では捕まらず、保存の段階まで気づけないのでここで固定する。
+  it("Recipe は解析結果を保存するのに必要な列を持つ", () => {
+    expect(Object.keys(Prisma.RecipeScalarFieldEnum)).toEqual([
+      "id",
+      "userId",
+      "title",
+      "imageUrl",
+      // 何人分か。デザインの「材料（4人分）」の見出しに使う（design.md 6.2.4）
+      "servings",
+      "createdAt",
+      "updatedAt",
+    ]);
+  });
+
+  it("材料は分量を文字列で持つ（「少々」「適量」があるため）", () => {
+    expect(Object.keys(Prisma.IngredientScalarFieldEnum)).toEqual([
+      "id",
+      "recipeId",
+      "name",
+      "amount",
+      "category",
+      "order",
+    ]);
+  });
+
+  it("手順は順序を保つための order を持つ", () => {
+    expect(Object.keys(Prisma.StepScalarFieldEnum)).toEqual(["id", "recipeId", "order", "text"]);
+  });
 });
 
 // Auth.js の Prisma アダプタは型が効かない。

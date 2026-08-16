@@ -172,6 +172,10 @@
 
 ## 段階6: 解析結果を Recipe / Ingredient / Step として保存する `lib/repositories/recipe.ts` を追加する
 
+- [x] **`schema.prisma` に `Recipe.servings Int?` を追加する**（design.md 6.2.4）
+- [x] Claude のスキーマとプロンプトに `servings` を追加する
+- [x] `Prisma.RecipeScalarFieldEnum` の列一覧をテストで固定する
+- [ ] **⚠️ ローカルで `npx prisma migrate dev --name add_recipe_servings` を実行し、生成物をコミットに含める**
 - [ ] Recipe / Ingredient / Step を**1トランザクション**で作る
 - [ ] `order` に配列の添字をそのまま入れる（design.md 2章）
 - [ ] `userId` は引数で受け取る。**Repository はセッションを知らない**
@@ -274,6 +278,7 @@
 
 - [ ] design.md の残った `⚠️` を実測で置き換える（`.kiro/README.md` の6）
 - [ ] このファイルの「実施時の記録」のうち、以降も参照する内容を design.md へ還元する
+- [ ] **`REQUIREMENTS.md` と `UI_DESIGN.md` に人数（`servings`）を追記する**（design.md 6.2.4。どちらも人数に触れていないまま）
 - [ ] `HANDOVER.md` を Phase 3（recipe-view）向けに更新する
 - [ ] `.kiro/README.md` のフェーズ表で `recipe-analysis` を **完了**にする
 - [ ] バグ検証を行い、**報告してから** push する

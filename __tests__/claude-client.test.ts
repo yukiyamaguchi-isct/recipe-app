@@ -31,6 +31,7 @@ const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0x00]);
 const VALID_OUTPUT = {
   isRecipe: true,
   title: "肉じゃが",
+  servings: 4,
   ingredients: [
     { name: "じゃがいも", amount: "3個", category: "VEGETABLE" },
     { name: "牛こま切れ肉", amount: "200g", category: "OTHER" },
@@ -78,6 +79,25 @@ describe("スキーマが Prisma と一致する（design.md 8章）", () => {
     });
 
     expect(parsed.ingredients[0].amount).toBe("少々");
+  });
+
+  it("servings は数値で受け取る（design.md 6.2.4）", () => {
+    expect(RecipeAnalysisSchema.parse(VALID_OUTPUT).servings).toBe(4);
+  });
+
+  it("人数が読み取れない場合は servings が null", () => {
+    // 「2〜3人分」「たっぷり」「記載なし」はすべてここに落ちる
+    const parsed = RecipeAnalysisSchema.parse({ ...VALID_OUTPUT, servings: null });
+
+    expect(parsed.servings).toBeNull();
+  });
+
+  it("servings に文字列を入れさせない（「4人分」ではなく 4）", () => {
+    expect(() => RecipeAnalysisSchema.parse({ ...VALID_OUTPUT, servings: "4人分" })).toThrow();
+  });
+
+  it("servings は整数のみ（2.5人分のような値を弾く）", () => {
+    expect(() => RecipeAnalysisSchema.parse({ ...VALID_OUTPUT, servings: 2.5 })).toThrow();
   });
 
   it("知らないカテゴリを弾く", () => {
@@ -183,6 +203,18 @@ describe("リクエストの組み立て（design.md 5.1 / 落とし穴 #1・#11
       expect(text).toContain(category);
     }
   });
+
+  it("プロンプトが人数の丸めを禁じている（design.md 6.2.4）", async () => {
+    parseMock.mockResolvedValue(response());
+
+    await analyzeRecipeImage(JPEG);
+
+    // スキーマは「数値か null」しか保証しない。「2〜3人分」を勝手に 2 や 3 にしないことは
+    // プロンプトでしか担保できないので、指示が消えていないことを固定する。
+    const text = parseMock.mock.calls[0][0].messages[0].content[1].text;
+    expect(text).toContain("人分");
+    expect(text).toMatch(/推測や丸めをしないでください/);
+  });
 });
 
 describe("成功時", () => {
@@ -244,7 +276,9 @@ describe("失敗時（design.md 5.1 の失敗モード表）", () => {
 
   it("isRecipe が false なら AnalysisFailedError（撮り直しを促す）", async () => {
     parseMock.mockResolvedValue(
-      response({ parsed_output: { isRecipe: false, title: "", ingredients: [], steps: [] } }),
+      response({
+        parsed_output: { isRecipe: false, title: "", servings: null, ingredients: [], steps: [] },
+      }),
     );
 
     await expect(analyzeRecipeImage(JPEG)).rejects.toBeInstanceOf(AnalysisFailedError);
@@ -252,7 +286,9 @@ describe("失敗時（design.md 5.1 の失敗モード表）", () => {
 
   it("撮り直しの文言に具体的な指示が入っている（Req6）", async () => {
     parseMock.mockResolvedValue(
-      response({ parsed_output: { isRecipe: false, title: "", ingredients: [], steps: [] } }),
+      response({
+        parsed_output: { isRecipe: false, title: "", servings: null, ingredients: [], steps: [] },
+      }),
     );
 
     await expect(analyzeRecipeImage(JPEG)).rejects.toThrow(/明るい場所/);
