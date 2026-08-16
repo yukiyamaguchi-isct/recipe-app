@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #F2F3F0; }
+  a { color: #1F7A4D; text-decoration: none; }
+  a:hover { color: #175E3B; text-decoration: underline; }
+  @keyframes barpulse { 0% { opacity: .55 } 50% { opacity: 1 } 100% { opacity: .55 } }
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'BIZ UDPGothic', 'Yu Gothic', system-ui, sans-serif; color: #1A1D1A; background: #F2F3F0; padding: 48px 40px 96px; display: flex; flex-direction: column; gap: 64px; -webkit-font-smoothing: antialiased;">
+
+  <header style="display: flex; flex-direction: column; gap: 16px; max-width: 900px;">
+    <div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; letter-spacing: .12em; color: #55605A;">RECIPE OCR APP — DESIGN SYSTEM v1 / MVP</div>
+    <h1 style="margin: 0; font-size: 40px; line-height: 1.3; font-weight: 700; letter-spacing: -.01em;">キッチンで読めるレシピUI</h1>
+    <p style="margin: 0; font-size: 18px; line-height: 1.8; color: #3A423C; max-width: 62ch; text-wrap: pretty;">30〜50cm離れて、濡れた手で操作する前提。本文17px下限、タップ領域48px下限、コントラスト4.5:1以上。装飾はCSS固有の表現を避け、React Nativeへ移植可能な範囲に限定。</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+      <span style="font-size: 14px; padding: 8px 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #DCDFD9; color: #3A423C;">カテゴリ = 寒色3色 / PANTONE 304 C 起点</span>
+      <span style="font-size: 14px; padding: 8px 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #DCDFD9; color: #3A423C;">移動 = 面なし / 絞り込み = 塗りピル</span>
+      <span style="font-size: 14px; padding: 8px 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #DCDFD9; color: #3A423C;">材料行 = 数量左・材料名右</span>
+      <span style="font-size: 14px; padding: 8px 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #DCDFD9; color: #3A423C;">文言 = 体言止め</span>
+    </div>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">00 — カテゴリ3色の比較（A 単一色相 / B 食材連想 / C 赤みの茶 / D 寒色 304C）</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; max-width: 1200px; align-items: start;">
+
+      <div style="background: #FFFFFF; border: 1.5px solid #1F7A4D; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 19px; font-weight: 700;">A案：単一色相の濃淡3段</span>
+          <span style="font-size: 13px; font-weight: 700; color: #3A423C; background: #EFF0EC; border-radius: 999px; padding: 4px 10px;">比較用</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #E8EEF6; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #234A7A; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #234A7A;">野菜</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #CFDCEC; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #1D3E68; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #1D3E68;">調味料</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #B4C6DD; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #17324F; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #17324F;">その他</span></div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid #EFF0EC;">
+          <span style="font-size: 17px; font-weight: 500; color: #FFFFFF; background: #1F7A4D; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">全体</span>
+          <span style="font-size: 17px; color: #234A7A; background: #E8EEF6; border: 1px solid #C6D5E6; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">野菜</span>
+          <span style="font-size: 17px; color: #1D3E68; background: #CFDCEC; border: 1px solid #AFC4DC; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">調味料</span>
+          <span style="font-size: 17px; color: #17324F; background: #B4C6DD; border: 1px solid #97AECB; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">その他</span>
+        </div>
+        <div style="font-size: 16px; line-height: 1.8; color: #3A423C;">◯ プライマリの緑と絶対に混ざらない／濃淡なので色覚差でも順序が保たれる<br>△ どれがどれかは<b>ラベルを読まないと分からない</b>（遠距離では色が手がかりにならない）<br>△ 非選択タブに面があるため、選択中の判別がやや弱まる</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 19px; font-weight: 700;">B案：食材連想の3色</span>
+          <span style="font-size: 13px; font-weight: 700; color: #3A423C; background: #EFF0EC; border-radius: 999px; padding: 4px 10px;">比較用</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #E6F1EA; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #1E5E3A; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #1E5E3A;">野菜</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #F7EBD3; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #6B4A0F; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #6B4A0F;">調味料</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #E8ECEF; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #33424D; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #33424D;">その他</span></div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid #EFF0EC;">
+          <span style="font-size: 17px; font-weight: 500; color: #FFFFFF; background: #1F7A4D; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">全体</span>
+          <span style="font-size: 17px; color: #1E5E3A; background: #E6F1EA; border: 1px solid #C2DECE; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">野菜</span>
+          <span style="font-size: 17px; color: #6B4A0F; background: #F7EBD3; border: 1px solid #E3CFA4; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">調味料</span>
+          <span style="font-size: 17px; color: #33424D; background: #E8ECEF; border: 1px solid #CBD2D7; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">その他</span>
+        </div>
+        <div style="font-size: 16px; line-height: 1.8; color: #3A423C;">◯ 30〜50cm離れても<b>色だけで所属が分かる</b>／読み替えの学習が不要<br>◯ 見出しの識別が速く、材料が多いレシピで効く<br>△ 野菜の緑がプライマリ緑と近い → 淡面のみに限定し、ボタンには使わない<br>△ 3色それぞれの濃淡管理が必要（トークンが増える）</div>
+      </div>
+    </div>
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 19px; font-weight: 700;">C案：単一色相／赤みの茶</span>
+          <span style="font-size: 13px; font-weight: 700; color: #3A423C; background: #EFF0EC; border-radius: 999px; padding: 4px 10px;">比較用</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #F5E9E2; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #6E3B24; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #6E3B24;">野菜</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #E9D3C6; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #5C2F1B; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #5C2F1B;">調味料</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #D8BAA8; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #4A2413; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #4A2413;">その他</span></div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid #EFF0EC;">
+          <span style="font-size: 17px; font-weight: 500; color: #FFFFFF; background: #1F7A4D; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">全体</span>
+          <span style="font-size: 17px; color: #6E3B24; background: #F5E9E2; border: 1px solid #E2CCC0; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">野菜</span>
+          <span style="font-size: 17px; color: #5C2F1B; background: #E9D3C6; border: 1px solid #D3B6A5; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">調味料</span>
+          <span style="font-size: 17px; color: #4A2413; background: #D8BAA8; border: 1px solid #C09E89; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">その他</span>
+        </div>
+        <div style="font-size: 16px; line-height: 1.8; color: #3A423C;">◯ 料理・木のまな板を思わせる暖色。<b>プライマリの緑と補色関係</b>で、緑のボタンが最も目立つ<br>◯ 白背景の上で青系より柔らかく、明るいキッチンでのギラつきが少ない<br>△ 濃い段（その他）が「汚れ・焦げ」の印象に寄りやすい → 最濃を明るめに留める<br>△ 食材連想は働かないため、A案同様ラベル必須</div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 19px; font-weight: 700;">D案：B案の寒色バリエーション</span>
+          <span style="font-size: 13px; font-weight: 700; color: #FFFFFF; background: #1F7A4D; border-radius: 999px; padding: 4px 10px;">採用</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #FAFAF8; border-radius: 8px;">
+          <span style="width: 40px; height: 40px; border-radius: 8px; background: #A2DFE8; border: 1px solid #7FC7D3; flex: none;"></span>
+          <span style="font-size: 15px; line-height: 1.6; color: #3A423C; font-family: ui-monospace, Menlo, monospace;">PANTONE 304 C ≈ #A2DFE8<br>→ シアン起点に色相を等間隔で寒色側へ3分割</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #DFF2F5; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #0F5560; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #0F5560;">野菜</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #DDE8F7; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #1C3F70; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #1C3F70;">調味料</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #E2E1F2; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #33356E; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #33356E;">その他</span></div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid #EFF0EC;">
+          <span style="font-size: 17px; font-weight: 500; color: #FFFFFF; background: #1F7A4D; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">全体</span>
+          <span style="font-size: 17px; color: #0F5560; background: #DFF2F5; border: 1px solid #A2DFE8; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">野菜</span>
+          <span style="font-size: 17px; color: #1C3F70; background: #DDE8F7; border: 1px solid #B6CDEA; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">調味料</span>
+          <span style="font-size: 17px; color: #33356E; background: #E2E1F2; border: 1px solid #BFBEE0; border-radius: 999px; padding: 11px 18px; min-height: 48px; display: inline-flex; align-items: center;">その他</span>
+        </div>
+        <div style="font-size: 16px; line-height: 1.8; color: #3A423C;">◯ 3色とも寒色なので<b>色相は違っても温度感が揃い</b>、B案より画面がうるさくない<br>◯ 淡面がどれも明るく、明るいキッチンでも白背景と分離する<br>△ シアン〜青〜藍は隣接色相のため、B案ほど<b>ひと目の識別は速くない</b>（濃色の文字ラベルで補う）<br>△ 「野菜＝水色」は連想が働かないので、A案・C案同様ラベル必須</div>
+      </div>
+    </div>
+    <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 20px 24px; max-width: 1200px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 17px; font-weight: 700;">B案・C案・D案のコントラスト</div>
+      <div style="font-size: 16px; line-height: 1.9; color: #3A423C; font-family: ui-monospace, Menlo, monospace;">B案　野菜 #1E5E3A / #E6F1EA = 6.7:1　調味料 #6B4A0F / #F7EBD3 = 6.8:1　その他 #33424D / #E8ECEF = 8.7:1<br>C案　野菜 #6E3B24 / #F5E9E2 = 7.6:1　調味料 #5C2F1B / #E9D3C6 = 7.7:1　その他 #4A2413 / #D8BAA8 = 7.4:1<br>D案　野菜 #0F5560 / #DFF2F5 = 7.2:1　調味料 #1C3F70 / #DDE8F7 = 8.4:1　その他 #33356E / #E2E1F2 = 8.7:1</div>
+      <div style="font-size: 16px; line-height: 1.8; color: #3A423C;">距離から色だけで読み分けたいなら B案。統一感とトークンの単純さなら A案／C案で、緑のボタンを最も目立たせたいなら C案。いずれも「色＋文字ラベル」は維持。</div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">01 — 「移動」と「絞り込み」の描き分け</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px;">
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 19px; font-weight: 700;">移動：面を持たない</div>
+        <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #3A423C;">押しても状態が残らないものは、塗りも枠も持たせない。文字色＋方向記号（←／↓）だけ。ヘッダー内に横一列。</p>
+        <div style="display: flex; gap: 8px; align-items: center; padding: 12px; background: #FAFAF8; border-radius: 8px;">
+          <span style="font-size: 17px; color: #1F7A4D; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center;">← 一覧</span>
+          <span style="font-size: 17px; color: #1F7A4D; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center;">材料 ↓</span>
+          <span style="font-size: 17px; color: #1F7A4D; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center;">作り方 ↓</span>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 19px; font-weight: 700;">操作：枠を持つ</div>
+        <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #3A423C;">モードが変わるものは枠線ボタン。移動と同じ行に並んでも、輪郭の有無で別種と読める。</p>
+        <div style="display: flex; gap: 8px; align-items: center; padding: 12px; background: #FAFAF8; border-radius: 8px;">
+          <span style="font-size: 17px; font-weight: 500; color: #1F7A4D; border: 1.5px solid #1F7A4D; border-radius: 8px; padding: 12px 20px; min-height: 48px; display: inline-flex; align-items: center;">編集</span>
+          <span style="font-size: 17px; font-weight: 500; color: #3A423C; border: 1.5px solid #B8BEB6; border-radius: 8px; padding: 12px 20px; min-height: 48px; display: inline-flex; align-items: center;">✎ 改題</span>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 19px; font-weight: 700;">絞り込み：面を持つ</div>
+        <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #3A423C;">状態を表すものは塗りピル。常にどれか1つが必ず点灯。セクション見出しの直下に置き、所属を位置で示す。</p>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px; background: #FAFAF8; border-radius: 8px;">
+          <span style="font-size: 17px; font-weight: 500; color: #FFFFFF; background: #1F7A4D; border-radius: 999px; padding: 12px 22px; min-height: 48px; display: inline-flex; align-items: center;">全体</span>
+          <span style="font-size: 17px; color: #3A423C; background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 999px; padding: 12px 22px; min-height: 48px; display: inline-flex; align-items: center;">野菜</span>
+          <span style="font-size: 17px; color: #3A423C; background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 999px; padding: 12px 22px; min-height: 48px; display: inline-flex; align-items: center;">調味料</span>
+          <span style="font-size: 17px; color: #3A423C; background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 999px; padding: 12px 22px; min-height: 48px; display: inline-flex; align-items: center;">その他</span>
+        </div>
+      </div>
+    </div>
+    <div style="background: #E8F2EC; border-left: none; border: 1px solid #C3DDCE; border-radius: 12px; padding: 20px 24px; font-size: 16px; line-height: 1.8; color: #204A34; max-width: 1200px;">3層ルール：<b>面なし＝移動</b>／<b>枠線＝操作</b>／<b>塗り＝現在の絞り込み状態</b>。この3つ以外の見た目をヘッダーとタブに追加しない。</div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">02 — カラートークン</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; max-width: 1200px;">
+      <sc-for list="{{ swatches }}" as="s" hint-placeholder-count="12">
+        <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; overflow: hidden;">
+          <div style="height: 72px; background: {{ s.hex }};"></div>
+          <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 3px;">
+            <div style="font-size: 15px; font-weight: 500;">{{ s.name }}</div>
+            <div style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A;">{{ s.token }}</div>
+            <div style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A;">{{ s.hex }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; max-width: 1200px;">
+      <div style="background: #DFF2F5; border: 1px solid #A2DFE8; border-radius: 12px; padding: 20px;">
+        <div style="font-size: 15px; font-family: ui-monospace, Menlo, monospace; color: #0F5560;">--color-cat-veg</div>
+        <div style="font-size: 22px; font-weight: 700; color: #0F5560; margin-top: 8px;">野菜</div>
+        <div style="font-size: 15px; color: #0F5560; margin-top: 4px; line-height: 1.7;">面 #DFF2F5／字 #0F5560</div>
+      </div>
+      <div style="background: #DDE8F7; border: 1px solid #B6CDEA; border-radius: 12px; padding: 20px;">
+        <div style="font-size: 15px; font-family: ui-monospace, Menlo, monospace; color: #1C3F70;">--color-cat-season</div>
+        <div style="font-size: 22px; font-weight: 700; color: #1C3F70; margin-top: 8px;">調味料</div>
+        <div style="font-size: 15px; color: #1C3F70; margin-top: 4px; line-height: 1.7;">面 #DDE8F7／字 #1C3F70</div>
+      </div>
+      <div style="background: #E2E1F2; border: 1px solid #BFBEE0; border-radius: 12px; padding: 20px;">
+        <div style="font-size: 15px; font-family: ui-monospace, Menlo, monospace; color: #33356E;">--color-cat-other</div>
+        <div style="font-size: 22px; font-weight: 700; color: #33356E; margin-top: 8px;">その他</div>
+        <div style="font-size: 15px; color: #33356E; margin-top: 4px; line-height: 1.7;">面 #E2E1F2／字 #33356E</div>
+      </div>
+    </div>
+    <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #3A423C; max-width: 62ch; text-wrap: pretty;">カテゴリは PANTONE 304 C（≈ #A2DFE8）を起点に、寒色側で色相を3分割（シアン／青／藍）。温度感が揃うため画面がうるさくならず、プライマリの緑とも混ざらない。隣接色相のため識別は色だけに頼らず、<b>必ず文字ラベルを併記</b>する。</p>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 20px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">03 — コントラスト検証</h2>
+    <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; overflow: hidden; max-width: 900px;">
+      <div style="display: grid; grid-template-columns: 1.6fr 1fr .8fr .8fr; gap: 0; font-size: 14px; font-weight: 700; background: #FAFAF8; border-bottom: 1px solid #DCDFD9; padding: 14px 20px; color: #55605A;">
+        <div>組み合わせ</div><div>見本</div><div>比率</div><div>判定</div>
+      </div>
+      <sc-for list="{{ contrast }}" as="c" hint-placeholder-count="8">
+        <div style="display: grid; grid-template-columns: 1.6fr 1fr .8fr .8fr; align-items: center; gap: 0; padding: 12px 20px; border-bottom: 1px solid #EFF0EC; font-size: 15px;">
+          <div style="line-height: 1.6;">{{ c.pair }}</div>
+          <div style="background: {{ c.bg }}; color: {{ c.fg }}; padding: 8px 12px; border-radius: 6px; font-size: 15px; display: inline-block;">あ材料A</div>
+          <div style="font-family: ui-monospace, Menlo, monospace;">{{ c.ratio }}</div>
+          <div style="color: #1F7A4D; font-weight: 500;">{{ c.verdict }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">04 — タイポグラフィ・余白・角丸</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 1200px; align-items: start;">
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="font-size: 15px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">font stack: Noto Sans JP → Hiragino Sans → BIZ UDPGothic → Yu Gothic → system-ui</div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A; width: 108px; flex: none;">display 28/1.4</span><span style="font-size: 28px; font-weight: 700; line-height: 1.4;">鶏肉のトマト煮</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A; width: 108px; flex: none;">title 22/1.5</span><span style="font-size: 22px; font-weight: 700; line-height: 1.5;">材料（4人分）</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A; width: 108px; flex: none;">lead 19/1.7</span><span style="font-size: 19px; line-height: 1.7;">材料名は19px、遠距離の主役</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A; width: 108px; flex: none;">body 17/1.8</span><span style="font-size: 17px; line-height: 1.8;">本文の下限。手順文はこのサイズ</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A; width: 108px; flex: none;">meta 15/1.6</span><span style="font-size: 15px; line-height: 1.6; color: #55605A;">作成日・補助情報のみ</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A; width: 108px; flex: none;">micro 13/1.5</span><span style="font-size: 13px; line-height: 1.5; color: #55605A;">ラベル。画面上は最小限</span></div>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 15px; font-weight: 700;">余白（4の倍数）</div>
+          <div style="display: flex; align-items: flex-end; gap: 10px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 4px; height: 4px; background: #1F7A4D;"></div><span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">1</span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; background: #1F7A4D;"></div><span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">2</span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: #1F7A4D;"></div><span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">3</span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #1F7A4D;"></div><span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">4</span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 24px; height: 24px; background: #1F7A4D;"></div><span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">6</span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 32px; height: 32px; background: #1F7A4D;"></div><span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">8</span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 48px; height: 48px; background: #1F7A4D;"></div><span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">12</span></div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 15px; font-weight: 700;">角丸・影</div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div style="width: 96px; height: 64px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 8px; display: grid; place-items: center; font-size: 13px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">sm 8</div>
+            <div style="width: 96px; height: 64px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">md 12</div>
+            <div style="width: 96px; height: 64px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">full</div>
+            <div style="width: 96px; height: 64px; background: #FFFFFF; border-radius: 12px; box-shadow: 0 1px 2px rgba(26,29,26,.08); display: grid; place-items: center; font-size: 13px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">e1</div>
+            <div style="width: 96px; height: 64px; background: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 12px rgba(26,29,26,.12); display: grid; place-items: center; font-size: 13px; font-family: ui-monospace, Menlo, monospace; color: #55605A;">e2</div>
+          </div>
+        </div>
+        <div style="font-size: 15px; line-height: 1.8; color: #3A423C;">タップ領域は最小48×48px、隣接要素との間隔は8px以上。影は e1（カード）と e2（固定要素・ダイアログ）の2段のみ。</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">05 — コンポーネント</h2>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; max-width: 1200px; align-items: start;">
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">ボタン</div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button type="button" style="font: inherit; font-size: 19px; font-weight: 700; color: #FFFFFF; background: #1F7A4D; border: none; border-radius: 12px; min-height: 56px; padding: 0 24px; cursor: pointer;" style-hover="background: #175E3B;">この内容で決定</button>
+          <button type="button" style="font: inherit; font-size: 19px; font-weight: 500; color: #1F7A4D; background: #FFFFFF; border: 1.5px solid #1F7A4D; border-radius: 12px; min-height: 56px; padding: 0 24px; cursor: pointer;" style-hover="background: #E8F2EC;">編集する</button>
+          <button type="button" style="font: inherit; font-size: 19px; font-weight: 500; color: #B3261E; background: #FFFFFF; border: 1.5px solid #E3AEAA; border-radius: 12px; min-height: 56px; padding: 0 24px; cursor: pointer;" style-hover="background: #FDECEA;">削除</button>
+          <div style="display: flex; gap: 12px;">
+            <button type="button" disabled="disabled" style="font: inherit; font-size: 17px; font-weight: 500; color: #8A928B; background: #EFF0EC; border: none; border-radius: 12px; min-height: 48px; padding: 0 20px; flex: 1;">無効</button>
+            <button type="button" style="font: inherit; font-size: 17px; font-weight: 500; color: #FFFFFF; background: #175E3B; border: none; border-radius: 12px; min-height: 48px; padding: 0 20px; flex: 1;">押下中</button>
+          </div>
+        </div>
+        <div style="font-size: 15px; line-height: 1.7; color: #55605A;">高さ56px（主要動作）／48px（補助）。ラベルは体言止め、最大8文字。</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">レシピカード</div>
+        <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(26,29,26,.08);">
+          <div style="aspect-ratio: 16 / 10; background: repeating-linear-gradient(135deg, #EFF0EC 0 8px, #E6E8E3 8px 16px); display: grid; place-items: center;">
+            <span style="font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: #55605A;">recipe photo</span>
+          </div>
+          <div style="padding: 16px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 19px; font-weight: 700; line-height: 1.5;">鶏肉と根菜のトマト煮込み</div>
+            <div style="font-size: 15px; color: #55605A;">2026年8月12日</div>
+          </div>
+        </div>
+        <div style="font-size: 15px; line-height: 1.7; color: #55605A;">カード全面がタップ領域。タイトルは2行まで、以降は省略。</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">空状態</div>
+        <div style="border: 1.5px dashed #C9CDC6; border-radius: 12px; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; background: #FAFAF8;">
+          <div style="width: 56px; height: 56px; border-radius: 12px; border: 2px solid #B8BEB6; display: grid; place-items: center; font-size: 26px; color: #55605A;">＋</div>
+          <div style="font-size: 19px; font-weight: 700;">レシピなし</div>
+          <div style="font-size: 17px; line-height: 1.8; color: #3A423C; max-width: 26ch;">料理本のページを撮影すると、材料と作り方を自動で読み取り。</div>
+          <button type="button" style="font: inherit; font-size: 17px; font-weight: 700; color: #FFFFFF; background: #1F7A4D; border: none; border-radius: 12px; min-height: 56px; padding: 0 28px; cursor: pointer; margin-top: 4px;">写真を撮る</button>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">材料の1行表示</div>
+        <div style="border: 1px solid #EFF0EC; border-radius: 12px; overflow: hidden;">
+          <sc-for list="{{ ingredients }}" as="ing" hint-placeholder-count="5">
+            <div style="display: flex; align-items: baseline; gap: 16px; padding: 16px 18px; border-bottom: 1px solid #EFF0EC; background: #FFFFFF;">
+              <div style="width: 5.5em; flex: none; text-align: right; font-size: 19px; font-weight: 700; font-feature-settings: 'tnum'; line-height: 1.6;">{{ ing.qty }}</div>
+              <div style="flex: 1; font-size: 19px; line-height: 1.6; text-wrap: pretty;">{{ ing.name }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size: 15px; line-height: 1.7; color: #55605A;">数量を左固定幅・右揃え、材料名を左揃えで可変。買い物中に数量だけを縦に追える。長い数量は折り返し、材料名の1行目に揃う。</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">カテゴリ見出し</div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #DFF2F5; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #0F5560; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #0F5560;">野菜</span><span style="font-size: 15px; color: #0F5560; margin-left: auto;">4</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #DDE8F7; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #1C3F70; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #1C3F70;">調味料</span><span style="font-size: 15px; color: #1C3F70; margin-left: auto;">5</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; background: #E2E1F2; border-radius: 8px; padding: 10px 16px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #33356E; flex: none;"></span><span style="font-size: 17px; font-weight: 700; color: #33356E;">その他</span><span style="font-size: 15px; color: #33356E; margin-left: auto;">2</span></div>
+        </div>
+        <div style="font-size: 15px; line-height: 1.7; color: #55605A;">面の濃さ＋文字ラベルの二重符号。行そのものには着色せず、見出しだけで所属を示す。</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">手順リスト</div>
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div style="display: flex; gap: 16px; align-items: flex-start;">
+            <div style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: #E8F2EC; color: #1F7A4D; font-size: 19px; font-weight: 700; display: grid; place-items: center;">1</div>
+            <div style="font-size: 17px; line-height: 1.9; padding-top: 6px; text-wrap: pretty;">にんじんと玉ねぎを一口大に切る。鶏もも肉は6等分。</div>
+          </div>
+          <div style="display: flex; gap: 16px; align-items: flex-start;">
+            <div style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: #E8F2EC; color: #1F7A4D; font-size: 19px; font-weight: 700; display: grid; place-items: center;">2</div>
+            <div style="font-size: 17px; line-height: 1.9; padding-top: 6px; text-wrap: pretty;">鍋にオリーブオイルを熱し、鶏肉の皮目から焼き色をつける。</div>
+          </div>
+        </div>
+        <div style="font-size: 15px; line-height: 1.7; color: #55605A;">行間1.9。手順間は24px空け、離れても行の境界が分かるように。</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">フォーム入力</div>
+        <label style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 15px; font-weight: 500; color: #3A423C;">材料名</span>
+          <input type="text" value="にんじん（中）" style="font: inherit; font-size: 19px; padding: 14px 16px; min-height: 56px; border: 1.5px solid #B8BEB6; border-radius: 12px; background: #FFFFFF; color: #1A1D1A;" style-focus="border-color: #1F7A4D; outline: 3px solid #C3DDCE;">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 15px; font-weight: 500; color: #3A423C;">カテゴリ</span>
+          <select style="font: inherit; font-size: 19px; padding: 14px 16px; min-height: 56px; border: 1.5px solid #B8BEB6; border-radius: 12px; background: #FFFFFF; color: #1A1D1A;">
+            <option>野菜</option>
+            <option>調味料</option>
+            <option>その他</option>
+          </select>
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 15px; font-weight: 500; color: #B3261E;">分量</span>
+          <input type="text" value="" style="font: inherit; font-size: 19px; padding: 14px 16px; min-height: 56px; border: 1.5px solid #B3261E; border-radius: 12px; background: #FFFFFF;">
+          <span style="font-size: 15px; color: #B3261E;">未入力</span>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">進捗表示（3段階）</div>
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 32px; height: 32px; flex: none; border-radius: 999px; background: #1F7A4D; color: #FFFFFF; font-size: 17px; display: grid; place-items: center;">✓</div>
+            <div style="font-size: 17px; color: #55605A;">アップロード完了</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 32px; height: 32px; flex: none; border-radius: 999px; border: 3px solid #1F7A4D; animation: barpulse 1.4s ease-in-out infinite;"></div>
+            <div style="font-size: 19px; font-weight: 700;">文字を読み取り中</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 32px; height: 32px; flex: none; border-radius: 999px; border: 2px solid #DCDFD9;"></div>
+            <div style="font-size: 17px; color: #8A928B;">材料を仕分け中</div>
+          </div>
+        </div>
+        <div style="height: 8px; border-radius: 999px; background: #EFF0EC; overflow: hidden;"><div style="width: 58%; height: 100%; background: #1F7A4D;"></div></div>
+        <div style="font-size: 15px; color: #55605A;">最大30秒。現在の段階のみ太字＋濃色、完了は✓、未着手は淡色。</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">エラー表示</div>
+        <div style="background: #FDECEA; border: 1px solid #E3AEAA; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 19px; font-weight: 700; color: #8C1D18;">読み取り失敗</div>
+          <div style="font-size: 17px; line-height: 1.8; color: #5F1B16;">文字が判別できず。ページ全体が入るよう、明るい場所で撮り直し。</div>
+          <button type="button" style="font: inherit; font-size: 17px; font-weight: 700; color: #FFFFFF; background: #B3261E; border: none; border-radius: 12px; min-height: 48px; padding: 0 20px; align-self: flex-start; cursor: pointer;">撮り直す</button>
+        </div>
+        <div style="background: #FFF8E6; border: 1px solid #E8D9A8; border-radius: 12px; padding: 16px 20px; font-size: 17px; line-height: 1.8; color: #5C4A16;">一部の材料を仕分けできず。「その他」に分類。</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 19px; font-weight: 700;">確認ダイアログ</div>
+        <div style="background: #F2F3F0; border-radius: 12px; padding: 24px; display: grid; place-items: center;">
+          <div style="background: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 12px rgba(26,29,26,.12); padding: 24px; width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 22px; font-weight: 700;">この行を削除</div>
+            <div style="font-size: 17px; line-height: 1.8; color: #3A423C;">「しょうゆ 大さじ2」を削除。元に戻せません。</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+              <button type="button" style="font: inherit; font-size: 19px; font-weight: 700; color: #FFFFFF; background: #B3261E; border: none; border-radius: 12px; min-height: 56px; cursor: pointer;">削除する</button>
+              <button type="button" style="font: inherit; font-size: 19px; font-weight: 500; color: #3A423C; background: #FFFFFF; border: 1.5px solid #B8BEB6; border-radius: 12px; min-height: 56px; cursor: pointer;">やめる</button>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 15px; line-height: 1.7; color: #55605A;">濡れた手の誤タップ対策として縦並び。破壊的動作を上に置かず、間隔10px以上。</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">06 — 画面への適用（構成は既定のまま）</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+
+      <div data-screen-label="01 ログイン" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 700; color: #55605A;">1. ログイン</div>
+        <div style="width: 390px; height: 720px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 20px; box-shadow: 0 4px 12px rgba(26,29,26,.12); overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; padding: 32px 24px;">
+          <div style="width: 64px; height: 64px; border-radius: 16px; background: #1F7A4D; display: grid; place-items: center; color: #FFFFFF; font-size: 28px; font-weight: 700;">R</div>
+          <div style="font-size: 28px; font-weight: 700; text-align: center;">レシピを撮る</div>
+          <div style="font-size: 17px; line-height: 1.9; color: #3A423C; text-align: center; max-width: 28ch; text-wrap: pretty;">料理本のページを撮影すると、材料と作り方を自動で読み取り。材料は野菜・調味料・その他に自動で仕分け。</div>
+          <button type="button" style="font: inherit; font-size: 19px; font-weight: 700; color: #FFFFFF; background: #1F7A4D; border: none; border-radius: 12px; min-height: 56px; width: 100%; cursor: pointer; margin-top: 12px;">Googleでログイン</button>
+        </div>
+      </div>
+
+      <div data-screen-label="02 レシピ一覧" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 700; color: #55605A;">2. レシピ一覧（スマホ1列）</div>
+        <div style="width: 390px; height: 720px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 20px; box-shadow: 0 4px 12px rgba(26,29,26,.12); overflow: hidden; display: flex; flex-direction: column; position: relative;">
+          <div style="padding: 20px; border-bottom: 1px solid #DCDFD9; background: #FFFFFF; display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 22px; font-weight: 700;">レシピ</div>
+            <div style="font-size: 15px; color: #55605A;">12件</div>
+          </div>
+          <div style="flex: 1; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; overflow: hidden;">
+              <div style="height: 150px; background: repeating-linear-gradient(135deg, #EFF0EC 0 8px, #E6E8E3 8px 16px); display: grid; place-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: #55605A;">recipe photo</div>
+              <div style="padding: 14px 16px;"><div style="font-size: 19px; font-weight: 700; line-height: 1.5;">鶏肉と根菜のトマト煮込み</div><div style="font-size: 15px; color: #55605A; margin-top: 4px;">2026年8月12日</div></div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; overflow: hidden;">
+              <div style="height: 150px; background: repeating-linear-gradient(135deg, #EFF0EC 0 8px, #E6E8E3 8px 16px); display: grid; place-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: #55605A;">recipe photo</div>
+              <div style="padding: 14px 16px;"><div style="font-size: 19px; font-weight: 700; line-height: 1.5;">豚汁</div><div style="font-size: 15px; color: #55605A; margin-top: 4px;">2026年8月9日</div></div>
+            </div>
+          </div>
+          <div style="position: absolute; right: 20px; bottom: 24px; width: 64px; height: 64px; border-radius: 999px; background: #1F7A4D; color: #FFFFFF; font-size: 32px; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(26,29,26,.12);">＋</div>
+        </div>
+      </div>
+
+      <div data-screen-label="03 解析中" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 700; color: #55605A;">3. アップロード / 解析中</div>
+        <div style="width: 390px; height: 720px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 20px; box-shadow: 0 4px 12px rgba(26,29,26,.12); overflow: hidden; display: flex; flex-direction: column; padding: 24px; gap: 28px;">
+          <div style="font-size: 17px; color: #1F7A4D; min-height: 48px; display: flex; align-items: center;">← 中止</div>
+          <div style="aspect-ratio: 4 / 3; border-radius: 12px; background: repeating-linear-gradient(135deg, #EFF0EC 0 8px, #E6E8E3 8px 16px); display: grid; place-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: #55605A;">撮影した写真</div>
+          <div style="font-size: 22px; font-weight: 700;">読み取り中（最大30秒）</div>
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 14px;"><div style="width: 32px; height: 32px; flex: none; border-radius: 999px; background: #1F7A4D; color: #FFFFFF; font-size: 17px; display: grid; place-items: center;">✓</div><div style="font-size: 17px; color: #55605A;">アップロード完了</div></div>
+            <div style="display: flex; align-items: center; gap: 14px;"><div style="width: 32px; height: 32px; flex: none; border-radius: 999px; border: 3px solid #1F7A4D; animation: barpulse 1.4s ease-in-out infinite;"></div><div style="font-size: 19px; font-weight: 700;">文字を読み取り中</div></div>
+            <div style="display: flex; align-items: center; gap: 14px;"><div style="width: 32px; height: 32px; flex: none; border-radius: 999px; border: 2px solid #DCDFD9;"></div><div style="font-size: 17px; color: #8A928B;">材料を仕分け中</div></div>
+          </div>
+          <div style="height: 8px; border-radius: 999px; background: #EFF0EC; overflow: hidden; margin-top: auto;"><div style="width: 58%; height: 100%; background: #1F7A4D;"></div></div>
+        </div>
+      </div>
+
+      <div data-screen-label="04 レシピ表示" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 700; color: #55605A;">4. レシピ表示（中心画面）</div>
+        <div style="width: 390px; height: 720px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 20px; box-shadow: 0 4px 12px rgba(26,29,26,.12); overflow: hidden; display: flex; flex-direction: column;">
+          <div style="background: #FFFFFF; border-bottom: 1px solid #DCDFD9; box-shadow: 0 1px 2px rgba(26,29,26,.08); flex: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px;">
+              <span style="font-size: 17px; color: #1F7A4D; padding: 12px 8px; min-height: 48px; display: inline-flex; align-items: center;">← 一覧</span>
+              <span style="font-size: 17px; font-weight: 500; color: #1F7A4D; border: 1.5px solid #1F7A4D; border-radius: 8px; padding: 10px 16px; min-height: 48px; display: inline-flex; align-items: center;">編集</span>
+            </div>
+            <div style="padding: 0 16px 8px; display: flex; align-items: baseline; gap: 8px;">
+              <span style="font-size: 22px; font-weight: 700; line-height: 1.4;">鶏肉と根菜のトマト煮込み</span>
+              <span style="font-size: 17px; color: #1F7A4D;">✎</span>
+            </div>
+            <div style="display: flex; gap: 4px; padding: 0 12px 6px;">
+              <span style="font-size: 17px; color: #1F7A4D; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center;">材料 ↓</span>
+              <span style="font-size: 17px; color: #1F7A4D; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center;">作り方 ↓</span>
+            </div>
+          </div>
+          <div style="flex: 1; overflow: hidden; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="font-size: 22px; font-weight: 700;">材料（4人分）</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 17px; font-weight: 500; color: #FFFFFF; background: #1F7A4D; border-radius: 999px; padding: 10px 18px; min-height: 48px; display: inline-flex; align-items: center;">全体</span>
+              <span style="font-size: 17px; color: #3A423C; background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 999px; padding: 10px 18px; min-height: 48px; display: inline-flex; align-items: center;">野菜</span>
+              <span style="font-size: 17px; color: #3A423C; background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 999px; padding: 10px 18px; min-height: 48px; display: inline-flex; align-items: center;">調味料</span>
+              <span style="font-size: 17px; color: #3A423C; background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 999px; padding: 10px 18px; min-height: 48px; display: inline-flex; align-items: center;">その他</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; background: #DFF2F5; border-radius: 8px; padding: 10px 14px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #0F5560;"></span><span style="font-size: 17px; font-weight: 700; color: #0F5560;">野菜</span></div>
+            <div style="display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: baseline; gap: 14px; padding: 14px 4px; border-bottom: 1px solid #EFF0EC;"><div style="width: 5.5em; flex: none; text-align: right; font-size: 19px; font-weight: 700;">1本</div><div style="font-size: 19px;">にんじん（中）</div></div>
+              <div style="display: flex; align-items: baseline; gap: 14px; padding: 14px 4px; border-bottom: 1px solid #EFF0EC;"><div style="width: 5.5em; flex: none; text-align: right; font-size: 19px; font-weight: 700;">2個</div><div style="font-size: 19px;">玉ねぎ</div></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; background: #DDE8F7; border-radius: 8px; padding: 10px 14px;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #1C3F70;"></span><span style="font-size: 17px; font-weight: 700; color: #1C3F70;">調味料</span></div>
+            <div style="display: flex; align-items: baseline; gap: 14px; padding: 14px 4px; border-bottom: 1px solid #EFF0EC;"><div style="width: 5.5em; flex: none; text-align: right; font-size: 19px; font-weight: 700;">大さじ2</div><div style="font-size: 19px;">しょうゆ</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="05 確認モード" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 700; color: #55605A;">5. レシピ表示（確認モード）</div>
+        <div style="width: 390px; height: 720px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 20px; box-shadow: 0 4px 12px rgba(26,29,26,.12); overflow: hidden; display: flex; flex-direction: column;">
+          <div style="background: #FFF8E6; border-bottom: 1px solid #E8D9A8; padding: 14px 16px; font-size: 17px; font-weight: 700; color: #5C4A16; flex: none;">確認画面 — 内容をチェック</div>
+          <div style="background: #FFFFFF; border-bottom: 1px solid #DCDFD9; flex: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px;">
+              <span style="font-size: 17px; color: #1F7A4D; padding: 12px 8px; min-height: 48px; display: inline-flex; align-items: center;">← 一覧</span>
+              <span style="font-size: 17px; font-weight: 500; color: #1F7A4D; border: 1.5px solid #1F7A4D; border-radius: 8px; padding: 10px 16px; min-height: 48px; display: inline-flex; align-items: center;">編集</span>
+            </div>
+            <div style="padding: 0 16px 8px; display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 22px; font-weight: 700; line-height: 1.4;">鶏肉と根菜のトマト煮込み</span><span style="font-size: 17px; color: #1F7A4D;">✎</span></div>
+            <div style="display: flex; gap: 4px; padding: 0 12px 6px;">
+              <span style="font-size: 17px; color: #1F7A4D; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center;">材料 ↓</span>
+              <span style="font-size: 17px; color: #1F7A4D; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center;">作り方 ↓</span>
+            </div>
+          </div>
+          <div style="flex: 1; overflow: hidden; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="font-size: 22px; font-weight: 700;">作り方</div>
+            <div style="display: flex; gap: 14px;"><div style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: #E8F2EC; color: #1F7A4D; font-size: 19px; font-weight: 700; display: grid; place-items: center;">1</div><div style="font-size: 17px; line-height: 1.9;">にんじんと玉ねぎを一口大に切る。</div></div>
+            <div style="display: flex; gap: 14px;"><div style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: #E8F2EC; color: #1F7A4D; font-size: 19px; font-weight: 700; display: grid; place-items: center;">2</div><div style="font-size: 17px; line-height: 1.9;">鶏肉の皮目から焼き色をつける。</div></div>
+          </div>
+          <div style="flex: none; border-top: 1px solid #DCDFD9; background: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -4px 12px rgba(26,29,26,.06);">
+            <button type="button" style="font: inherit; font-size: 19px; font-weight: 700; color: #FFFFFF; background: #1F7A4D; border: none; border-radius: 12px; min-height: 56px; cursor: pointer;">この内容で決定</button>
+            <button type="button" style="font: inherit; font-size: 19px; font-weight: 500; color: #1F7A4D; background: #FFFFFF; border: 1.5px solid #1F7A4D; border-radius: 12px; min-height: 56px; cursor: pointer;">編集する</button>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="06 レシピ編集" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 700; color: #55605A;">6. レシピ編集</div>
+        <div style="width: 390px; height: 720px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 20px; box-shadow: 0 4px 12px rgba(26,29,26,.12); overflow: hidden; display: flex; flex-direction: column;">
+          <div style="background: #FFFFFF; border-bottom: 1px solid #DCDFD9; padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; flex: none;">
+            <span style="font-size: 17px; color: #1F7A4D; padding: 12px 8px; min-height: 48px; display: inline-flex; align-items: center;">← 中止</span>
+            <span style="font-size: 19px; font-weight: 700;">材料を編集</span>
+            <span style="font-size: 17px; color: #FFFFFF; background: #1F7A4D; border-radius: 8px; padding: 10px 16px; min-height: 48px; display: inline-flex; align-items: center;">保存</span>
+          </div>
+          <div style="flex: 1; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 10px;">
+                <input type="text" value="にんじん（中）" style="font: inherit; font-size: 19px; padding: 12px 14px; min-height: 52px; border: 1.5px solid #B8BEB6; border-radius: 8px; flex: 1; min-width: 0;">
+                <input type="text" value="1本" style="font: inherit; font-size: 19px; padding: 12px 14px; min-height: 52px; border: 1.5px solid #B8BEB6; border-radius: 8px; width: 96px; flex: none;">
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <select style="font: inherit; font-size: 17px; padding: 12px 14px; min-height: 52px; border: 1.5px solid #B8BEB6; border-radius: 8px; flex: 1; min-width: 0; background: #FFFFFF;"><option>野菜</option><option>調味料</option><option>その他</option></select>
+                <button type="button" style="font: inherit; font-size: 17px; color: #B3261E; background: #FFFFFF; border: 1.5px solid #E3AEAA; border-radius: 8px; min-height: 52px; width: 96px; flex: none; cursor: pointer;">削除</button>
+              </div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 10px;">
+                <input type="text" value="しょうゆ" style="font: inherit; font-size: 19px; padding: 12px 14px; min-height: 52px; border: 1.5px solid #B8BEB6; border-radius: 8px; flex: 1; min-width: 0;">
+                <input type="text" value="大さじ2" style="font: inherit; font-size: 19px; padding: 12px 14px; min-height: 52px; border: 1.5px solid #B8BEB6; border-radius: 8px; width: 96px; flex: none;">
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <select style="font: inherit; font-size: 17px; padding: 12px 14px; min-height: 52px; border: 1.5px solid #B8BEB6; border-radius: 8px; flex: 1; min-width: 0; background: #FFFFFF;"><option>調味料</option><option>野菜</option><option>その他</option></select>
+                <button type="button" style="font: inherit; font-size: 17px; color: #B3261E; background: #FFFFFF; border: 1.5px solid #E3AEAA; border-radius: 8px; min-height: 52px; width: 96px; flex: none; cursor: pointer;">削除</button>
+              </div>
+            </div>
+            <button type="button" style="font: inherit; font-size: 19px; font-weight: 500; color: #1F7A4D; background: #FFFFFF; border: 1.5px dashed #1F7A4D; border-radius: 12px; min-height: 56px; cursor: pointer;">＋ 行を追加</button>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="02b 一覧 PC" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 700; color: #55605A;">2b. レシピ一覧（PC 3列）</div>
+        <div style="width: 900px; background: #FAFAF8; border: 1px solid #DCDFD9; border-radius: 16px; box-shadow: 0 4px 12px rgba(26,29,26,.12); overflow: hidden;">
+          <div style="padding: 20px 28px; background: #FFFFFF; border-bottom: 1px solid #DCDFD9; display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 22px; font-weight: 700;">レシピ</div>
+            <span style="font-size: 17px; font-weight: 700; color: #FFFFFF; background: #1F7A4D; border-radius: 12px; padding: 12px 22px; min-height: 48px; display: inline-flex; align-items: center;">＋ 新規</span>
+          </div>
+          <div style="padding: 24px 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <sc-for list="{{ cards }}" as="card" hint-placeholder-count="6">
+              <div style="background: #FFFFFF; border: 1px solid #DCDFD9; border-radius: 12px; overflow: hidden;">
+                <div style="height: 132px; background: repeating-linear-gradient(135deg, #EFF0EC 0 8px, #E6E8E3 8px 16px); display: grid; place-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #55605A;">recipe photo</div>
+                <div style="padding: 14px 16px;"><div style="font-size: 19px; font-weight: 700; line-height: 1.5;">{{ card.title }}</div><div style="font-size: 15px; color: #55605A; margin-top: 4px;">{{ card.date }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 20px; max-width: 900px;">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; color: #55605A; font-family: ui-monospace, Menlo, monospace;">07 — Tailwind v4 @theme</h2>
+    <pre style="margin: 0; background: #1A1D1A; color: #E7EAE5; border-radius: 12px; padding: 24px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.9; overflow-x: auto;">{{ themeCode }}</pre>
+  </section>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      swatches: [
+        { name: "背景", token: "--color-bg", hex: "#FAFAF8" },
+        { name: "面", token: "--color-surface", hex: "#FFFFFF" },
+        { name: "文字", token: "--color-ink", hex: "#1A1D1A" },
+        { name: "文字（副）", token: "--color-ink-sub", hex: "#55605A" },
+        { name: "境界", token: "--color-border", hex: "#DCDFD9" },
+        { name: "境界（強）", token: "--color-border-strong", hex: "#B8BEB6" },
+        { name: "プライマリ", token: "--color-primary", hex: "#1F7A4D" },
+        { name: "プライマリ（押下）", token: "--color-primary-dark", hex: "#175E3B" },
+        { name: "プライマリ（淡）", token: "--color-primary-soft", hex: "#E8F2EC" },
+        { name: "危険", token: "--color-danger", hex: "#B3261E" },
+        { name: "危険（淡）", token: "--color-danger-soft", hex: "#FDECEA" },
+        { name: "注意（淡）", token: "--color-warn-soft", hex: "#FFF8E6" }
+      ],
+      contrast: [
+        { pair: "ink #1A1D1A / bg #FAFAF8", bg: "#FAFAF8", fg: "#1A1D1A", ratio: "16.1:1", verdict: "AAA" },
+        { pair: "ink-sub #55605A / surface #FFFFFF", bg: "#FFFFFF", fg: "#55605A", ratio: "5.6:1", verdict: "AA" },
+        { pair: "primary #1F7A4D / surface", bg: "#FFFFFF", fg: "#1F7A4D", ratio: "5.3:1", verdict: "AA" },
+        { pair: "surface / primary（白抜き）", bg: "#1F7A4D", fg: "#FFFFFF", ratio: "5.3:1", verdict: "AA" },
+        { pair: "danger #B3261E / surface", bg: "#FFFFFF", fg: "#B3261E", ratio: "5.6:1", verdict: "AA" },
+        { pair: "野菜 #0F5560 / #DFF2F5", bg: "#DFF2F5", fg: "#0F5560", ratio: "7.2:1", verdict: "AAA" },
+        { pair: "調味料 #1C3F70 / #DDE8F7", bg: "#DDE8F7", fg: "#1C3F70", ratio: "8.4:1", verdict: "AAA" },
+        { pair: "その他 #33356E / #E2E1F2", bg: "#E2E1F2", fg: "#33356E", ratio: "8.7:1", verdict: "AAA" },
+        { pair: "注意 #5C4A16 / #FFF8E6", bg: "#FFF8E6", fg: "#5C4A16", ratio: "7.4:1", verdict: "AAA" }
+      ],
+      ingredients: [
+        { qty: "1本", name: "にんじん（中）" },
+        { qty: "2個", name: "玉ねぎ" },
+        { qty: "大さじ2", name: "しょうゆ" },
+        { qty: "小さじ1/2", name: "塩" },
+        { qty: "400g", name: "鶏もも肉（皮つき）" }
+      ],
+      cards: [
+        { title: "鶏肉と根菜のトマト煮込み", date: "2026年8月12日" },
+        { title: "豚汁", date: "2026年8月9日" },
+        { title: "きんぴらごぼう", date: "2026年8月5日" },
+        { title: "サバの味噌煮", date: "2026年7月30日" },
+        { title: "ほうれん草のおひたし", date: "2026年7月28日" },
+        { title: "鶏そぼろ丼", date: "2026年7月21日" }
+      ],
+      themeCode: [
+        "@import \"tailwindcss\";",
+        "",
+        "@theme {",
+        "  --font-sans: \"Noto Sans JP\", \"Hiragino Sans\", \"BIZ UDPGothic\", \"Yu Gothic\", system-ui, sans-serif;",
+        "",
+        "  --color-bg: #FAFAF8;",
+        "  --color-surface: #FFFFFF;",
+        "  --color-ink: #1A1D1A;",
+        "  --color-ink-sub: #55605A;",
+        "  --color-border: #DCDFD9;",
+        "  --color-border-strong: #B8BEB6;",
+        "  --color-primary: #1F7A4D;",
+        "  --color-primary-dark: #175E3B;",
+        "  --color-primary-soft: #E8F2EC;",
+        "  --color-danger: #B3261E;",
+        "  --color-danger-soft: #FDECEA;",
+        "  --color-warn-soft: #FFF8E6;",
+        "",
+        "  /* カテゴリ = PANTONE 304 C 起点の寒色3色（必ず文字ラベル併記） */",
+        "  --color-cat-veg: #DFF2F5;      --color-cat-veg-ink: #0F5560;   /* 304C tint */",
+        "  --color-cat-season: #DDE8F7;   --color-cat-season-ink: #1C3F70;",
+        "  --color-cat-other: #E2E1F2;    --color-cat-other-ink: #33356E;",
+        "",
+        "  --text-micro: 0.8125rem;  --text-micro--line-height: 1.5;",
+        "  --text-meta: 0.9375rem;   --text-meta--line-height: 1.6;",
+        "  --text-body: 1.0625rem;   --text-body--line-height: 1.8;",
+        "  --text-lead: 1.1875rem;   --text-lead--line-height: 1.7;",
+        "  --text-title: 1.375rem;   --text-title--line-height: 1.5;",
+        "  --text-display: 1.75rem;  --text-display--line-height: 1.4;",
+        "",
+        "  --radius-sm: 8px;  --radius-md: 12px;  --radius-full: 999px;",
+        "  --shadow-e1: 0 1px 2px rgba(26,29,26,.08);",
+        "  --shadow-e2: 0 4px 12px rgba(26,29,26,.12);",
+        "",
+        "  --spacing: 4px;              /* 1=4 2=8 3=12 4=16 6=24 8=32 12=48 */",
+        "  --size-tap: 48px;            /* 最小タップ領域 */",
+        "  --size-tap-lg: 56px;         /* 主要ボタン高さ */",
+        "}"
+      ].join("\n")
+    };
+  }
+}
+</script>
+</body>
+</html>
