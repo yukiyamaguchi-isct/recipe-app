@@ -225,9 +225,13 @@ new Anthropic({ timeout: 50_000 }); // 50秒。maxDuration=60 の内側に収め
 
 **nft のトレースが、Vercel が関数に同梱するファイルを決めている。** ここに `.node` と `libvips-cpp.so` が載っている以上、**最も恐れていた失敗（本番で `Cannot find module sharp` になる）は起きない。** glibc 版と musl 版の両方が追跡されている。
 
-**再現手順**: `normalizeImage` を import する Route Handler を1つ作り、`npm run build` の後に
-`cat .next/server/app/<route>/route.js.nft.json | tr ',' '\n' | grep '\.node'`。
+**再現手順**: `npm run build` の後に
+`cat .next/server/app/api/recipes/analyze/route.js.nft.json | tr ',' '\n' | grep '\.node'`。
 ここが空なら sharp は同梱されていない。
+
+> **✅ 段階8で、使い捨てではない実コードから確認できた。** `POST /api/recipes/analyze` が
+> Service → `normalizeImage` 経由で sharp に到達するため、**本番の構成そのままで**
+> `sharp-linux-x64-0.35.3.node` がトレースされている。段階3の probe による確認と同じ結果。
 
 ### 本番ビルドを起動して実際に動かした（✅ 実測 2026-08-16）
 
@@ -554,6 +558,21 @@ const STATUS: Record<string, number> = {
 };
 ```
 
+### ⚠️ `proxy.ts` の matcher が `api` を除外していることに依存している（✅ 実測 2026-08-16）
+
+`proxy.ts` の matcher は `"/((?!api|_next/static|_next/image|favicon.ico).*)"`。**`api` を除外しているので `/api/recipes/analyze` は proxy を通らない。**
+
+これは元々「Auth.js 自身の `/api/auth/*` を通すため」の除外だが、**結果としてこのエンドポイントの挙動を決めている。**
+
+| matcher              | 未ログインでの応答                           |
+| -------------------- | -------------------------------------------- |
+| `api` を除外（現状） | **401 + `{ success: false, error: {...} }`** |
+| `api` も対象にすると | `/login` への **307 リダイレクト**           |
+
+**requirements.md Req7 が求めているのは 401。** matcher に `api` を含める変更を入れると、**テストは通るのに実機では 307 が返る**という食い違いが生まれる（ユニットテストは Route Handler を直接呼ぶため proxy を経由しない）。
+
+**見分け方**: 未ログインで `curl -i -X POST /api/recipes/analyze` して `HTTP/1.1 401` であること。`307` なら matcher が変わっている。
+
 > **✅ 実測（段階2）: 初版のこの表には `ANALYSIS_REFUSED` が抜けていた。** 7章のエラー表には載っているのに 5.4 の対応表に無く、そのまま実装すると**拒否だけ 500 になる**ところだった。対応表に無いコードは 500 にフォールバックするため、**型でもテストでも捕まらない**。同じ抜けを繰り返さないよう、`lib/errors.ts` の全エラーが対応表に載っていることをテストで固定した（`__tests__/api-response.test.ts`）。
 
 ## 5.5 内部情報を `cause` に隔離する（✅ 実測 2026-08-15）
@@ -817,6 +836,9 @@ Claude 側のスキーマも `z.number().int().nullable()` で対になってい
 | 19  | 画面に「最大30秒」と出しつつ50秒待たせる                | ユーザーに嘘をつく形になる。**先に方針を決める**                                              | 6.2.3           |
 | 20  | 旧版の緑基調 `Recipe Design System.dc.html` を参照する  | 履歴として同梱されているだけ。**正は v2**                                                     | 6.2             |
 | 21  | デザインHTMLをそのままコードに写す                      | あれはリファレンス。Tailwind v4 + React 19 の規約で組み直す                                   | 6.2             |
+| 22  | Route Handler のテストを jsdom で走らせる               | `formData()` の File が壊れ、実装が悪いように見える                                           | 9.3             |
+| 23  | `formData()` の戻りを `instanceof File` で判定する      | 実行環境によって `false` になる。**文字列かどうかで見る**                                     | 9.3             |
+| 24  | `proxy.ts` の matcher に `api` を含める                 | 未ログインで 401 ではなく 307 が返る。**ユニットテストは通る**                                | 5.4             |
 
 ## 9.1 環境側で踏んだもの（Phase 2 着手時に実際に踏んだ）
 
@@ -848,6 +870,32 @@ Claude 側のスキーマも `z.number().int().nullable()` で対になってい
 除外する前の `npm run format` は、**エラーを出しつつ `README.md` と一部の `.dc.html` を整形して保存していた。** 受け取った原文が変わってしまうため、`git checkout` で戻した。**外部資料を取り込んだら、コードを触る前に先に除外設定を入れる。**
 
 **`.prettierignore` は gitignore 構文。** パスを `"..."` で囲むと引用符ごと1つのパターンとして扱われ、**除外が効かないまま `format` が成功したように見える**（実際には資料が書き換わり続ける）。囲まずに `Design_引き継ぎ資料/` と書く。
+
+## 9.3 Route Handler のテストは node 環境で走らせる（✅ 実測 2026-08-16、段階8）
+
+`vitest.config.mts` の `environment` は **jsdom**（React の描画テストに DOM が要るため）。だが **Route Handler のテストを jsdom で走らせると `multipart/form-data` が壊れる。**
+
+| 症状                              | 実際に起きたこと                                                                                      |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `file instanceof File` が `false` | `formData()` が返すのは **undici の File**。jsdom のグローバル `File` とは別物                        |
+| 画像の中身が化ける                | jsdom の `File` を `FormData` に入れて読み直すと、バイト列が `[117,110,100,101,…]`（`"unde…"`）になる |
+
+**どちらも「実装が間違っている」ように見えるが、環境の食い違い。** 12件のテストが 400 を返して落ち、原因を実装側に探すと時間を溶かす。
+
+**対処は2つとも入れてある。**
+
+1. **テストファイルの先頭に `// @vitest-environment node`。** Route Handler に DOM は要らない
+2. **実装側で `instanceof File` を使わない。** 仕様上 `FormData.get()` の戻りは `string | File` なので、**文字列でなければファイル**と判定する。環境をまたいでも壊れない
+
+```ts
+// ❌ 環境によって false になる
+if (!(file instanceof File)) throw new InvalidImageError();
+
+// ✅ 仕様どおり
+if (file === null || typeof file === "string") throw new InvalidImageError();
+```
+
+**見分け方**: `formData()` から取った値の `constructor.name` が `File` なのに `instanceof File` が `false` なら、この食い違い。
 
 ---
 

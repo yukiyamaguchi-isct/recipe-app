@@ -218,17 +218,30 @@
 
 ## 段階8: 未ログインで401を返す `POST /api/recipes/analyze` を追加する
 
-- [ ] `export const maxDuration = 60` を置く（design.md 5.4）
-- [ ] `requireUserId()` で `userId` を取る。**リクエストボディの `userId` を見ない**（落とし穴 #10）
-- [ ] `multipart/form-data` を受ける
-- [ ] サーバー側で形式・サイズを再検証する（クライアントを信用しない）
-- [ ] `{ success: true, data: { recipeId } }` を返す
-- [ ] テスト: **未ログインで401** / ボディの `userId` を無視する（Req7）
-- [ ] テスト: 成功・失敗とも `{ success, data, error }` の形になる
+- [x] `export const maxDuration = 60` を置く（design.md 5.4）
+- [x] `requireUserId()` で `userId` を取る。**リクエストボディの `userId` を見ない**（落とし穴 #10）
+- [x] `multipart/form-data` を受ける
+- [x] サーバー側で形式・サイズを再検証する（クライアントを信用しない）
+- [x] `{ success: true, data: { recipeId } }` を返す
+- [x] テスト: **未ログインで401** / ボディの `userId` を無視する（Req7）
+- [x] テスト: 成功・失敗とも `{ success, data, error }` の形になる
+- [x] user-auth の requirements.md Req4 の2項目にチェックを入れる
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
 
-> **ここで `HANDOVER.md` 1章「持ち越し: Req4 の一部」が解消する。** user-auth の requirements.md Req4 の未確認2項目にもチェックを入れる。
+> **ここで `HANDOVER.md` 1章「持ち越し: Req4 の一部」が解消した。** user-auth の requirements.md Req4 の「Route Handler から `userId` を取得できる」「未ログインで 401」にチェック済み。
+
+### 実施時の記録
+
+- **ボディの `userId` を信用する実装に変えると、テストが `expected 'victim_user_id' to be 'clx1a2b3c4d5e6f7g8h9'` で落ちることを確認した。** 落とし穴 #10 が実際に守られている
+- **`multipart/form-data` のテストで12件がまとめて落ちた。原因は実装ではなく実行環境。** jsdom の `File` と undici の `FormData` が噛み合わず、(1) `instanceof File` が `false`、(2) 画像の中身が `"undefined"` の文字列に化ける、の2つが同時に起きた。**実装が悪いように見えるので、原因を実装側に探すと時間を溶かす**。design.md 9.3 に記録
+  - 対処1: テストファイルに `// @vitest-environment node`。**Route Handler に DOM は要らない**
+  - 対処2: 実装側で `instanceof File` を使わない。仕様上 `FormData.get()` は `string | File` を返すので、**文字列でなければファイル**と判定する
+- **サイズ超過は `InvalidImageError`（400）ではなく `ImageTooLargeError`（413）にした。** requirements.md Req2 が「413 相当」と定めているため。書き始めは 400 にしていて、受け入れ基準と突き合わせて気づいた
+- **形式の検証は Route Handler でやらない。** `normalizeImage()` が先頭バイトで判定するので、ここで宣言された MIME を見ると二重管理になる。Route が弾くのは「そもそも画像が入っていない」場合だけ
+- **`maxDuration` をテストで固定した。** 消しても型でもテストでも捕まらず、Vercel Hobby の既定（10秒）に戻って解析の途中で切れる
+- **sharp が「使い捨てではない実コード」からトレースされることを確認した。** `POST /api/recipes/analyze` の `route.js.nft.json` に `sharp-linux-x64-0.35.3.node` が載っている。段階3 は probe ルートでの確認だったが、**本番の構成そのままで同じ結果**になった
+- **`proxy.ts` の matcher が `api` を除外していることに、この 401 は依存している。** 元は Auth.js の `/api/auth/*` を通すための除外だが、結果としてこのエンドポイントが「307リダイレクトではなく401」を返す理由になっている。**matcher に `api` を含めると、ユニットテストは通るのに実機では 307 が返る**（テストは Route Handler を直接呼ぶため proxy を経由しない）。落とし穴 #24 として記録
 
 ---
 
