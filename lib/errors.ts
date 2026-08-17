@@ -80,14 +80,15 @@ export class AnalysisFailedError extends AppError {
   }
 }
 
-/** Claude API がタイムアウトした。HTTP 504。 */
+/**
+ * Claude API がタイムアウトした。HTTP 504。
+ *
+ * 文言は「タイムアウトしました」（2026-08-16 ユーザー決定 / design.md 6.2.3）。
+ * **これだけでは Req6 の「次にすること」を満たさない**ので、再試行の案内を続ける。
+ */
 export class AnalysisTimeoutError extends AppError {
   constructor(options?: { cause?: unknown }) {
-    super(
-      "ANALYSIS_TIMEOUT",
-      "解析に時間がかかりすぎたため中断しました。もう一度お試しください。",
-      options,
-    );
+    super("ANALYSIS_TIMEOUT", "タイムアウトしました。もう一度お試しください。", options);
   }
 }
 

@@ -174,4 +174,13 @@ describe("エラー文言（requirements.md Req6）", () => {
     expect(message).toContain("明るい場所");
     expect(message).toContain("ページ全体");
   });
+
+  it("タイムアウトの文言が原因と次の行動の両方を含む（Req6）", () => {
+    const message = new AnalysisTimeoutError().message;
+
+    // 原因は「タイムアウトしました」（2026-08-16 ユーザー決定）
+    expect(message).toContain("タイムアウトしました");
+    // これだけでは次にどうすればいいか分からないので、再試行の案内が要る
+    expect(message).toContain("もう一度");
+  });
 });
