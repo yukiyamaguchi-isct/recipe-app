@@ -269,16 +269,44 @@
 
 ## 段階10: S-03 アップロード画面（`app/upload/page.tsx`）を追加する
 
-- [ ] **ビジュアル仕様を design.md 6.2 に従って適用する**（2026-08-16 受領。`@theme` トークンは README のCSSをそのまま使える）
-- [ ] PC: ドラッグ＆ドロップ + クリック選択の両方（Req1）
-- [ ] スマホ: 「カメラで撮る」を第一候補、次に「写真を選ぶ」
-- [ ] 「JPEG / PNG・10MBまで」を画面に出す
-- [ ] 検証エラーをその場に日本語で出す（Req2 / Req6）
-- [ ] 保護ページとして `auth()` を通す
-- [ ] テスト: 検証エラーの表示
-- [ ] **見た目のクラスは最小限にする。** ビジュアルデザインの合流は Phase 3 の直前（`CLAUDE.md`）
+- [x] **ビジュアル仕様を design.md 6.2 に従って適用する**（2026-08-16 受領。`@theme` トークンは README のCSSをそのまま使える）
+- [x] PC: ドラッグ＆ドロップ + クリック選択の両方（Req1）
+- [x] スマホ: 「カメラで撮る」を第一候補、次に「写真を選ぶ」
+- [x] 「JPEG / PNG・10MBまで」を画面に出す
+- [x] 検証エラーをその場に日本語で出す（Req2 / Req6）
+- [x] 保護ページとして `auth()` を通す
+- [x] テスト: 検証エラーの表示
+- [x] ~~**見た目のクラスは最小限にする。** ビジュアルデザインの合流は Phase 3 の直前（`CLAUDE.md`）~~
+      → **この前提は消えた。** デザイン資料が 2026-08-16 に先に届いたため、この段階から確定仕様で組んだ（design.md 6.2）
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
+
+### 実施時の記録
+
+**2段に分けて進めた。** 10a がデザイントークンと書体、10b が画面本体。
+
+#### 10a: `@theme` と Noto Sans JP
+
+- **`--font-sans` は `var(--font-noto-sans-jp)` を参照するので、`layout.tsx` が書体を読み込むまで解決しない。** `globals.css` だけ入れても効かず、しかも**エラーにならずフォールバックで表示される**（気づきにくい）。ビルド後のCSSに `--font-noto-sans-jp:"Noto Sans JP", "Noto Sans JP Fallback"` が出ることで確認した
+- **`next/font/google` の `subsets` は preload の対象を決めるだけで、取得する字形の範囲ではない**（`next/dist/compiled/@next/font/dist/google/find-font-files-in-css.js` の `findFontFilesInCss`）。URL に `&subset=` は付かない（`get-google-fonts-url.js`）ため、`subsets: ["latin"]` でも日本語の字形は落ちない。**実測で 125 ファイル / 5.3MB が self-host された**
+- **`weight` を指定しなかった。** Noto Sans JP は Google Fonts 側で日本語を100本以上の unicode-range サブセットに割っているため、400/500/700 を個別に取ると単純にファイル数が3倍になる。可変フォント1本で3ウェイトとも出せる
+- **`lang="en"` を `ja` に直した。** create-next-app の既定のまま日本語UIを載せていた。読み上げとハイフネーションが英語として扱われる
+- `metadata` も "Create Next App" のままだったので置き換えた
+- **Geist / Geist_Mono は削除した。** `--font-geist-*` を参照するクラスが1つも無いことを確認済み
+- **Tailwind v4 に `--size-*` の名前空間は無い。** `--size-tap` / `--size-tap-lg` から `h-tap` のようなユーティリティは生えないので `h-[var(--size-tap-lg)]` と書いている
+- **トークン名を間違えてもビルドは通り、CSSが静かに空になる。** 使ったユーティリティが実際にCSSを吐いているかをビルド成果物で1つずつ確認した（`bg-header` / `text-lead` / `bg-danger-soft` / `hover:bg-primary-dark` ほか19種）
+
+#### 10b: `app/upload/`
+
+- **`page.tsx`（Server Component、`auth()`）と `photo-picker.tsx`（`"use client"`）に分けた。** 保護をサーバー側に残したまま、選択と検証をクライアントで完結させるため
+- **解析の開始はこの段階では持たない。** 押しても何も起きないボタンを置かないよう、`読み取る` は段階11 で進捗表示と一緒に足す
+- **弾いた写真はプレビューしない。** 「使えないものが大きく映っている」状態を作らないため、検証に落ちたら `selected` を `null` に戻す
+- **`URL.createObjectURL` は自動で解放されない。** `useEffect` のクリーンアップで、選び直しと離脱の両方で `revokeObjectURL` する。テストで固定した
+- **`next/image` は使わない。** `blob:` URL は最適化の経路と噛み合わない。`@next/next/no-img-element` は理由を書いて1箇所だけ抑制した（`--max-warnings 0` なので放置できない）
+- **`onDragOver` で `preventDefault()` を呼ばないと、ブラウザが写真を別ページとして開いてしまう。** ドロップ以前に既定動作を止める必要がある
+- **「カメラで撮る」は `md:hidden`。** `capture="environment"` はPCでは無視されて通常のファイル選択になるだけだが、PCで撮影を第一候補に出す意味が無い。「写真を選ぶ」だけ、スマホでは副次・PCでは主要に見た目を切り替えている（要素は1つのまま）
+- **隠した `input` は `<label>` ではなく `button` から `click()` で開く。** `<label>` だと role が button にならず、テストからも支援技術からも「操作」として扱われない
+- テストは jsdom に Object URL が無いため `URL.createObjectURL` / `revokeObjectURL` だけ差し替えている
 
 ---
 

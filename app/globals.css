@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * デザイントークン。
+ *
+ * 出どころは `Design_引き継ぎ資料/design_handoff_recipe_design_system/README.md`
+ * （2026-08-16 受領）。**値を推測で変えない。** 変えるならデザイン側と合わせる。
+ * 使い方の規則は `.kiro/specs/recipe-analysis/design.md` 6.2。
+ *
+ * ダークモードは MVP では不要（同資料）。利用場面が「明るいキッチンで、スマホを台に
+ * 立てかけて 30〜50cm から見る」ため、ライト1組に絞る。create-next-app 由来の
+ * `@media (prefers-color-scheme: dark)` ブロックは削除済み。
+ */
+@theme {
+  /* 書体。Noto Sans JP は next/font で読み込み、CSS変数を layout.tsx から流す */
+  --font-sans:
+    var(--font-noto-sans-jp), "Hiragino Sans", "BIZ UDPGothic", "Yu Gothic", system-ui, sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* 面と文字 */
+  --color-bg: #ffffff; /* 画面本体の背景 */
+  --color-header: #e9f7f8; /* 固定ヘッダー・上部の帯 */
+  --color-surface: #ffffff; /* カード・ダイアログ */
+  --color-ink: #0b2d39; /* 本文 */
+  --color-ink-sub: #4a6570; /* 補助情報（作成日など） */
+  --color-border: #c8e4e8;
+  --color-border-strong: #9cc3ca; /* 入力欄の枠 */
+
+  /* 操作色 */
+  --color-primary: #0b2d39; /* 主要ボタンの面・選択中タブ。白文字 14.5:1 */
+  --color-primary-dark: #123e4d; /* 押下 */
+  --color-primary-soft: #d8f3f6; /* 手順番号の丸など */
+  --color-link: #0e6e7d; /* テキストリンク・枠線ボタン。5.9:1 */
+
+  /*
+   * アクセント（非文字要素専用）。
+   * ⚠️ --color-accent の上に文字を置かない。白文字 2.1:1 / 濃色 4.2:1 でどちらも不足する
+   * （design.md 落とし穴 #18）。進捗バー・完了マーク・ブランドマークに使う。
+   */
+  --color-accent: #00c6d7;
+  --color-accent-light: #7ae7f2; /* フォーカスリング・淡面 */
+  --color-attention: #f7b267; /* 確認バナー・注意表示の枠 */
+
+  /* 状態 */
+  --color-danger: #b3261e;
+  --color-danger-soft: #fdecea;
+  --color-warn-soft: #fdeeda;
+  --color-warn-ink: #7a4a12;
+  --color-danger-ink: #8c1d18;
+  --color-danger-body: #5f1b16;
+  --color-danger-border: #e3aeaa;
+
+  /* カテゴリ = 同色相シアンの明度3段（必ず文字ラベルを併記する） */
+  --color-cat-veg: #e4f8fa;
+  --color-cat-veg-ink: #0b4a55;
+  --color-cat-season: #b8edf4;
+  --color-cat-season-ink: #093b45;
+  --color-cat-other: #7ae7f2;
+  --color-cat-other-ink: #08323b;
+
+  /* タイポグラフィ。本文の下限は 17px（30〜50cm 離れて読むため） */
+  --text-micro: 0.8125rem; /* 13px */
+  --text-micro--line-height: 1.5;
+  --text-meta: 0.9375rem; /* 15px */
+  --text-meta--line-height: 1.6;
+  --text-body: 1.0625rem; /* 17px 本文下限 */
+  --text-body--line-height: 1.8;
+  --text-lead: 1.1875rem; /* 19px 材料名・ボタン */
+  --text-lead--line-height: 1.7;
+  --text-title: 1.375rem; /* 22px セクション見出し */
+  --text-title--line-height: 1.5;
+  --text-display: 1.75rem; /* 28px 画面タイトル */
+  --text-display--line-height: 1.4;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-full: 999px;
+
+  --shadow-e1: 0 1px 2px rgba(11, 45, 57, 0.08); /* カード・固定ヘッダー */
+  --shadow-e2: 0 4px 12px rgba(11, 45, 57, 0.12); /* FAB・ダイアログ */
+
+  --spacing: 4px; /* 1=4 2=8 3=12 4=16 6=24 8=32 12=48 */
+  --size-tap: 48px; /* 最小タップ領域 */
+  --size-tap-lg: 56px; /* 主要ボタン高さ */
 }
 
 /*
- * ダークモードは MVP では不要（2026-08-16 デザイン引き継ぎ資料）。
- * 利用場面が「明るいキッチンで、スマホを台に立てかけて 30〜50cm から見る」ため、
- * ライト1組のトークンに絞る。create-next-app 由来の
- * `@media (prefers-color-scheme: dark)` ブロックはここにあったが削除した。
+ * ⚠️ S-01（ログイン）と現在のホーム画面がまだ使っているトークン。
+ * デザインシステムには無いが、消すとあの2画面のクラスが解決されなくなる。
+ * **あの2画面をデザインシステムに合わせるときに、まとめて削除する。**
  */
+@theme inline {
+  --color-background: #ffffff;
+  --color-foreground: #171717;
+}
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  /* 以前は Arial 決め打ちで、日本語が環境依存のフォールバックに落ちていた */
+  font-family: var(--font-sans);
 }
