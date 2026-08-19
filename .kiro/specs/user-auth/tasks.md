@@ -10,7 +10,7 @@
 
 - [x] Google Cloud Console で OAuth クライアントを作成する（`SETUP.md` の Phase 1）
 - [x] `.env` に `AUTH_SECRET` / `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` を設定する
-- [ ] リダイレクトURI `http://localhost:3000/api/auth/callback/google` が登録済みか確認する
+- [x] リダイレクトURI `http://localhost:3000/api/auth/callback/google` が登録済みか確認する（実機ログインが成功したことで確認）
 
 > **開発環境について**: このフェーズはリモート実行環境（Neon への接続情報を持たない）で実装している。`prisma migrate dev` と実際の Google ログインはローカルでの実行が必要。段階1・段階6を参照。
 
@@ -24,7 +24,7 @@ Auth.js の Prisma アダプタが要求するスキーマを揃える。**型�
 - [x] `Account` モデルを追加する（複合主キー `@@id([provider, providerAccountId])`）
 - [x] `npx prisma generate` が通ることを確認する
 - [x] スキーマのテストを追加する（型で捕まらないぶんの担保）
-- [ ] **マイグレーションファイルを生成する（ローカル作業。下記参照）**
+- [x] **マイグレーションファイルを生成する**（ローカルで実行。`20260813155658_add_auth_account` / コミット `b4a4640`）
 
 **受け入れ基準**: `prisma generate` 成功、`format` / `lint` / `tsc` / `test` が終了コード0
 
@@ -156,11 +156,18 @@ Auth.js の Prisma アダプタが要求するスキーマを揃える。**型�
 
 ## 段階7: フェーズ表と引き継ぎ資料を更新する
 
-- [ ] `.kiro/README.md` の実装フェーズ表で `user-auth` を「完了」にする
-- [ ] `HANDOVER.md` を Phase 2 に向けて更新する（現在地・次にやること・Phase 2 で必要な環境変数）
-- [ ] `CLAUDE.md` の「Current state」を更新する
+- [x] `.kiro/README.md` の実装フェーズ表で `user-auth` を「完了」にする
+- [x] `HANDOVER.md` を Phase 2 に向けて更新する（現在地・次にやること・Phase 2 で必要な環境変数）
+- [x] `CLAUDE.md` の「Current state」を更新する
 
 **受け入れ基準**: 新しいセッションが `HANDOVER.md` だけで Phase 2 に入れる状態
+
+### 実施時の記録
+
+- **ブランチが `main` にマージされていない件を `HANDOVER.md` 1章末尾に明記した。** Phase 0 は `feat/foundation` をマージしてから進んだが、Phase 1 は実行環境の指定で `claude/recipe-app-progress-check-hbiv6f` に置いたまま。**次のセッションが勝手にマージも継続も決めないよう、2択としてユーザーに確認させる形にした**
+- `HANDOVER.md` 5章の「ハルシネーションを起こしやすい箇所」に Phase 1 の4件を追加した。**4件とも設計書に出典を書かずに記憶で書いた箇所から出ており、出典付きの箇所からは1件も出ていない**という事実を併記した
+- 7章に、このフェーズで実際に詰まった git / dev サーバーの操作を追加した（`git pull` が同名ローカルブランチを作らない件、pull 後の再起動）
+- 6章1に「stop hook の催促は許可ではない」を明記した。`CLAUDE.md` にも同趣旨があるが、破りやすい順の1番目なのでこちらにも置いた
 
 ---
 

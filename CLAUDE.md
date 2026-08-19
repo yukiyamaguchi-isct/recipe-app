@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-**Phase 0（foundation）完了 / Phase 1（user-auth）未着手**（2026-08-13 時点）。
+**Phase 1（user-auth）完了 / Phase 2（recipe-analysis）未着手**（2026-08-15 時点）。
 
-ツールチェーン（Next.js 16 / Prisma 7 + Neon / Prettier / Vitest）は動く状態にあるが、**アプリの機能コードはまだ無い**。`app/page.tsx` は create-next-app の初期ページのまま。
+Google アカウントでログインでき、未ログインでは保護されたページを開けない。**実機で確認済み。** レシピに関する機能はまだ無い。
 
 **セッションを引き継いだ場合は `HANDOVER.md` を最初に読むこと。** 現在地・未決事項・次の作業がまとまっている。
 
@@ -22,13 +22,15 @@ recipe-app/
 ├── UI_DESIGN.md               # UI設計（画面一覧・遷移・各画面の設計・決定事項）
 ├── SETUP.md                   # 開発者が手動でやる作業（外部サービス登録・キー取得）
 ├── .kiro/                     # Kiroフレームワーク。実装の「記憶」
-│   ├── README.md              # .kiroの使い方と実装フェーズ一覧
+│   ├── README.md              # .kiroの使い方、design.mdの書き方、実装フェーズ一覧
 │   ├── steering/              # 技術スタックとアーキテクチャ方針
 │   └── specs/<feature>/       # 機能ごとの requirements / design / tasks
-├── app/                       # layout / page（初期状態）、api/ は空
-├── lib/                       # prisma.ts のみ。services / repositories / clients は空
-├── prisma/                    # schema.prisma と初回マイグレーション
-├── __tests__/                 # 疎通確認用のテスト2本
+├── auth.ts                    # Auth.js の設定
+├── proxy.ts                   # 未ログイン時の先回りリダイレクト
+├── app/                       # login / ホーム / api/auth
+├── lib/                       # prisma.ts, errors.ts, auth/session.ts
+├── prisma/                    # schema.prisma とマイグレーション2本
+├── __tests__/                 # テスト19件
 ├── kiro-personal-app-guide.md      # Kiroフレームワークの参考ガイド
 ├── kiro-ai-prompts-template.md     # 同上（プロンプト集）
 └── CLAUDE.md
@@ -36,7 +38,15 @@ recipe-app/
 
 ### 次にやること
 
-**Phase 1（user-auth）**。着手前に `AUTH_SECRET` の生成（`SETUP.md` の Phase 1）と、Auth.js の Next.js 16 対応状況の調査が必要。詳細は `HANDOVER.md` の4章。
+**Phase 2（recipe-analysis）**。着手前に以下が必要。詳細は `HANDOVER.md` の4章。
+
+- **ユーザーの手作業**: `ANTHROPIC_API_KEY` / AWS S3 の3変数（`SETUP.md` の Phase 2）
+- **ブランチ方針の確認**: Phase 1 のブランチが `main` にマージされていない（`HANDOVER.md` 1章末尾）
+- **調査**: Claude API のモデルIDと制約値（`claude-api` skill）、`sharp` の Vercel 対応
+
+### 認証まわりの落とし穴
+
+Phase 1 で踏んだものが `.kiro/specs/user-auth/design.md` の**8章に一覧**でまとまっている。認証に触る前に読むこと。特に **`proxy.ts` は単体では何も保護しない**（`authorized` コールバックが要る）点は、壊してもエラーが出ないので注意。
 
 ## Read the design docs first
 
@@ -69,11 +79,11 @@ recipe-app/
 
 実装時に見落とすと問題になる制約。詳細は REQUIREMENTS.md の該当節を参照。
 
-- **画像は必ずリサイズしてから送る**（4.2）。Claude APIは1画像5MBが上限で、長辺1568pxを超える分は精度に寄与しない。クライアント側（Canvas）とサーバー側（sharp）の両方で長辺1568px / JPEG品質85に正規化する
-- **sharp では `.rotate()` を必ず呼ぶ**。呼ばないとEXIF回転が適用されず、スマホ写真が横倒しで保存される
+- **画像は必ずリサイズしてから送る**（4.2）。Claude API は1画像10MBが上限。解像度の上限はモデル依存で、**採用する Claude Opus 5 は高解像度ティア（長辺2576px / visual token 4784）**。クライアント側（Canvas）とサーバー側（sharp）の両方で長辺2576px / JPEG品質85に正規化する。**1568px は標準ティア（Claude 4.6以前）の値なので、古い記述を見たら疑う**
+- **sharp では `.rotate()` を必ず呼ぶ**。呼ばないとEXIF回転が適用されず、スマホ写真が横倒しで保存される。**Claude は画像のメタデータを一切読まない**ため、ここで適用しなければ解析結果にも回転が反映されない
 - **S3に保存するのは変換後の画像のみ**。元画像は保持しない（容量とプライバシー両面の理由）
 - **ローカルファイルシステムに永続データを書かない**。Vercelの関数には永続的な書き込み可能ファイルシステムがなく、ローカルでは動いても本番で壊れる
-- **HEICはMVP非対応**。ChromeのCanvasでデコードできず、sharpもlibheif付きビルドが必要なため。選択されたら明示的にエラーを返す
+- **HEICはMVP非対応**。**Claude API 自体が非対応**（JPEG / PNG / GIF / WebP のみ）で、加えてChromeのCanvasでデコードできず、sharpもlibheif付きビルドが必要なため。選択されたら明示的にエラーを返す
 - **解析結果は確認画面を出す前に保存する**（4.6）。確認画面で離脱した際に、APIコストと30秒を払った結果を失わないため
 - **画像解析は同期処理。ジョブキューを入れない**。Vercel Hobbyの実行時間上限（Fluid compute有効時300秒）に対し30秒は十分収まる。保険として `maxDuration = 60` とSDK timeout を設定する
 - **画像送信は Route Handlers を使う**。Server Actions は body size 上限がデフォルト1MBで先に効く

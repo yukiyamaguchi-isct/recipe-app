@@ -10,5 +10,11 @@
 kiro-personal-app-guide.md
 kiro-ai-prompts-template.md
 
+# Claude Design から受け取ったデザイン引き継ぎ資料。
+# 同梱の .dc.html は Prettier のHTMLパーサが解釈できず（閉じタグの解析エラー）、
+# `npm run format` が終了コード2で落ちる。整形する意味も無いので丸ごと除外する。
+# ⚠️ このファイルは gitignore 構文。引用符で囲むと文字として扱われ、除外が効かない。
+Design_引き継ぎ資料/
+
 # 依存関係のロックファイル
 package-lock.json

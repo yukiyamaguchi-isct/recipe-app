@@ -61,8 +61,8 @@
 **受け入れ基準**
 
 - [ ] Server Component からログイン中の `userId` を取得できる
-- [ ] Route Handler から同じ `userId` を取得できる
-- [ ] 未ログインで Route Handler を叩くと 401 が返る
+- [x] Route Handler から同じ `userId` を取得できる（Phase 2 段階8。`POST /api/recipes/analyze`）
+- [x] 未ログインで Route Handler を叩くと 401 が返る（Phase 2 段階8。`__tests__/analyze-route.test.ts`）
 - [ ] 取得できる `userId` が DB の `User.id` と一致する
 
 ### Req5: ログインに失敗したときに何が起きたか分かる
