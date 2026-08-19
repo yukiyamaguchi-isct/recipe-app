@@ -20,9 +20,9 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  // 「レシピ帳」は Phase 1 で実装した S-01 / ホームの見出しに合わせている。
-  // ⚠️ デザイン資料は S-01 のタイトルを「レシピを撮る」としており食い違う（design.md 6.2.5）
-  title: "レシピ帳",
+  // アプリ名（2026-08-17 ユーザー決定）。S-01 / ホームの見出しと揃える。
+  // デザイン資料の「レシピを撮る」は不採用（design.md 6.2.5）
+  title: "Cooking Instructor",
   description: "料理本のレシピを撮って保存できるアプリ。写真から材料と作り方を読み取ります。",
 };
 

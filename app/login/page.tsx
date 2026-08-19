@@ -47,7 +47,7 @@ export default async function LoginPage({
   return (
     <div className="flex flex-1 items-center justify-center px-6 py-16">
       <main className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold tracking-tight">レシピ帳</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Cooking Instructor</h1>
 
         {/* 何のアプリか分からないまま Google の認証を求めない（UI_DESIGN.md S-01） */}
         <p className="mt-3 text-sm leading-6 text-zinc-600">
