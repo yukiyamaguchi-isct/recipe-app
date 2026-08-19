@@ -2,9 +2,11 @@
 
 **別セッションへ作業を引き継ぐための文書。** 新しいチャットを始めたら、まずこのファイルを読むこと。
 
-- 最終更新: 2026-08-15
-- 現在地: **Phase 1（user-auth）完了 / Phase 2（recipe-analysis）は設計まで完了・実装未着手**
-- ブランチ: `claude/recipe-app-progress-check-hbiv6f`（push済み・**未マージ**）。1章末尾を必ず読むこと
+- 最終更新: 2026-08-17
+- 現在地: **Phase 2（recipe-analysis）は実装完了・実測未了。** 段階1〜11 が終わり、**実際の料理本で一度も解析していない**
+- ブランチ: `claude/recipe-analysis-9hk507`（push済み・**未マージ**）。1章末尾を必ず読むこと
+
+> **⚠️ 次にやることは Phase 3 ではない。** まず**ローカルで段階12（実測）**を行う。`.env` の実値がユーザーのローカルにしかないため、リモート実行環境では実行できない。**4章を読むこと。**
 
 現在地を自分で確認するコマンド:
 
@@ -76,7 +78,14 @@ vitest.setup.ts                     # afterEach(cleanup)。無いとDOMがテス
 
 `requirements.md` Req4 の「Route Handler から `userId` を取得できる」「未ログインで 401 が返る」は **Phase 1 では確認していない**。保護対象の Route Handler がまだ無いため。**Phase 2 で最初の保護付きエンドポイントを作るときに、`UnauthorizedError` → 401 の変換とあわせて実装・検証する。**
 
-### ⚠️ ブランチが `main` にマージされていない
+### ⚠️ ブランチが `main` にマージされていない（Phase 2 の分）
+
+**Phase 1 の分は解決済み。** `72ad3fd` までは `origin/main` に入っている（2026-08-16 時点で確認）。
+
+**Phase 2 の分は未マージ。** `claude/recipe-analysis-9hk507` が `origin/main` より 20 コミット先行している。**Phase 3 に入る前にユーザーへ扱いを確認すること。**
+
+<details>
+<summary>Phase 1 当時の記述（解決済み。履歴として残す）</summary>
 
 Phase 0 は `feat/foundation` を `main` にマージしてから次へ進んだが、**Phase 1 は `claude/recipe-app-progress-check-hbiv6f` に置いたまま**。実行環境の都合でブランチ名が指定されていたため。
 
@@ -99,18 +108,43 @@ f61f5ec feat: Auth.js 用に Account モデルと User.emailVerified を schema.
 
 **どちらにするかは勝手に決めない。** マージは `git` の操作なので、`CLAUDE.md` のとおり許可を得てから行う。
 
-### 未着手: Phase 2 以降
+（実際には 2 を選び、`claude/recipe-analysis-9hk507` の続きとして Phase 2 を進めた。）
+
+</details>
+
+### 完了（実装のみ）: Phase 2 — recipe-analysis
+
+写真1枚から材料と手順を読み取り、3分類して保存するまでが**コード上は動く**。段階1〜11 が終わり、テストは **236件**。`format` / `lint` / `tsc` / `test` / `build` はすべて終了コード0。
+
+| 追加したもの                       | 役割                                                 |
+| ---------------------------------- | ---------------------------------------------------- |
+| `lib/images/normalize.ts`          | sharp で長辺2576px / JPEG品質85に正規化（サーバー）  |
+| `lib/images/normalize.client.ts`   | Canvas で同じ正規化（ブラウザ）                      |
+| `lib/images/constants.ts`          | 両方が共有する上限値                                 |
+| `lib/clients/claude.ts`            | Claude への送信と構造化出力の受け取り                |
+| `lib/clients/s3.ts`                | 変換後の画像のアップロード                           |
+| `lib/repositories/recipe.ts`       | Recipe / Ingredient / Step の保存                    |
+| `lib/services/recipe-analysis.ts`  | 正規化→解析→S3→保存を1本に繋ぐ                       |
+| `app/api/recipes/analyze/route.ts` | `POST`。**最初の保護付きエンドポイント**             |
+| `app/upload/`                      | S-03（選択・検証・3段階の進捗・結果）                |
+| `lib/api-response.ts`              | 型付きエラー → HTTP ステータス（Phase 1 の持ち越し） |
+
+**ビジュアルデザインもここで合流した。** `CLAUDE.md` は「合流は Phase 3 の直前」としていたが、資料が先に届いたため段階10 から適用している（`.kiro/specs/recipe-analysis/design.md` 6.2）。
+
+**⚠️ 実測は一度もしていない。** 4章を読むこと。
+
+### 未着手: Phase 3 以降
 
 `.kiro/README.md` のフェーズ表が正。
 
-| #   | feature           | 状態                     |
-| --- | ----------------- | ------------------------ |
-| 0   | `foundation`      | **完了**                 |
-| 1   | `user-auth`       | **完了**                 |
-| 2   | `recipe-analysis` | **設計完了・実装未着手** |
-| 3   | `recipe-view`     | 未着手                   |
-| 4   | `recipe-list`     | 未着手                   |
-| 5   | `recipe-edit`     | 未着手                   |
+| #   | feature           | 状態                    |
+| --- | ----------------- | ----------------------- |
+| 0   | `foundation`      | **完了**                |
+| 1   | `user-auth`       | **完了**                |
+| 2   | `recipe-analysis` | **実装完了 / 実測未了** |
+| 3   | `recipe-view`     | 未着手                  |
+| 4   | `recipe-list`     | 未着手                  |
+| 5   | `recipe-edit`     | 未着手                  |
 
 ---
 
@@ -180,51 +214,58 @@ cd /c/recipe-app && while IFS= read -r line; do case "$line" in ''|'#'*) continu
 
 ---
 
-## 4. 次にやること: Phase 2（recipe-analysis）
+## 4. 次にやること: 段階12（ローカルでの実測）
 
-### やること
+**Phase 3 に入る前に、ここを終わらせる。** リモート実行環境では実行できない作業なので、**ユーザーのローカル（`C:\recipe-app`）で行う。**
 
-写真をアップロード → リサイズ → S3 に保存 → Claude API で解析 → 材料を3分類して DB に保存。**MVP の中核**で、これまでで最も大きいフェーズ。
+### 4.1 まず `prisma migrate` を実行する（⚠️ 最優先）
 
-該当する画面は S-03（アップロード / 解析中）。`UI_DESIGN.md` 3章を参照。
+**`Recipe.servings` の列がまだ DB に無い。** `schema.prisma` には書いてあるが、**マイグレーションが生成されていない**。`npx prisma migrate dev` は DB に接続するため、リモート実行環境では作れなかった。
 
-### コードを書く前に必ず調べること
-
-**記憶で設計を書かないこと。** `.kiro/README.md` の「design.md の書き方」に従い、**出典を書けない事実は書かない**。
-
-1. ~~**Claude API のモデルIDと制約値**~~ → **✅ 2026-08-15 完了。** モデルは `claude-opus-5`、画像は10MB / 長辺2576px。詳細と出典は `.kiro/specs/recipe-analysis/design.md` の1.1〜1.4
-2. **⚠️ `sharp` が Vercel で動くか。** 未検証。ネイティブバイナリを含むため相性を確認する。**着手時の最優先事項**（design.md 1.5）
-3. **⚠️ AWS SDK v3 の S3 クライアントの書き方。** 未検証。インストールした実物を確認する（design.md 1.6）
-4. **Route Handler での `UnauthorizedError` → 401 変換。** Phase 1 からの持ち越し（1章）。レスポンス形式は `.kiro/steering/architecture.md` の `{ success, data, error }`
-
-### 設計は完了している
-
-`.kiro/specs/recipe-analysis/` に `requirements.md` と `design.md` がある。**`tasks.md` はまだ無い。** 段階の切り方は `sharp` の Vercel 対応（上記2）が判明してから決めるほうが正確なため、着手時に書く。
-
-### 既に決まっていること（`CLAUDE.md` の Non-obvious constraints）
-
-**蒸し返さない。**
-
-- 画像はクライアント（Canvas）とサーバー（sharp）の両方で **長辺2576px** / JPEG品質85に正規化する（**1568px は Claude 4.6 以前の標準ティアの値。古い記述を見たら疑う**）
-- **S3 に保存するのは変換後の画像のみ。** 元画像は保持しない
-- **HEIC は MVP 非対応。** 選択されたら明示的にエラーを返す
-- **解析結果は確認画面を出す前に保存する。** 確認画面での離脱でAPIコストを失わないため
-- **同期処理。ジョブキューを入れない。** `maxDuration = 60` と SDK timeout を保険に置く
-- **画像送信は Route Handlers。** Server Actions は body size 上限が 1MB で先に効く
-- **ローカルファイルシステムに永続データを書かない**
-
-### 手順（`CLAUDE.md` の Workflow に従う）
-
+```bash
+npx prisma migrate dev --name add_recipe_servings
 ```
-1. ユーザーに「Phase 2 に入る」と報告する
-2. ブランチ方針を確認する（1章末尾の2択）→ 許可を得てブランチ作成
-3. 環境変数（3章）の手作業をユーザーに依頼する
-4. 上記の調査を行う
-5. .kiro/specs/recipe-analysis/ に requirements / design / tasks を作成
-   → design.md は .kiro/README.md の書き方に従う。user-auth の design.md が雛形
-6. 段階に分けて実装 → 各段階で検証 → 報告 → 許可を得てコミット
-7. 全段階完了 → 実機確認 → 報告 → 許可を得て push
-```
+
+**生成された `prisma/migrations/` をコミットに含める**（Phase 1 の `add_auth_account` と同じ）。**これを飛ばすと解析が保存の直前で必ず落ちる。**
+
+### 4.2 実際の料理本で解析する
+
+`.kiro/specs/recipe-analysis/tasks.md` の段階12 と、`design.md` 10章「受け入れの確認手順」11項目。
+
+| 見るもの                         | なぜ                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| 読み取り精度                     | 材料・分量・手順・タイトルが取れているか                                  |
+| **3分類の線引き**                | 「にんにく」「しょうが」「だし」「めんつゆ」（design.md 5.2）             |
+| **「少々」「適量」がそのまま**   | 数値化されず文字列で残ること（Req3）                                      |
+| **横向きに撮った写真**           | S3 の画像が正立しているか（`.rotate()` が効いているか）                   |
+| **解析にかかる実時間**           | 段階11 の切り替え秒数（現在12秒の**暫定値**）を決めるため                 |
+| `effort: "low"` で足りるか       | 上げるならコストとのトレードオフを**ユーザーに確認する**                  |
+| 見開きページ                     | 小さい文字が潰れないか                                                    |
+| **Vercel 本番で sharp が動くか** | ローカルとバンドルまでは確認済み。**本番実行だけ未確認**（design.md 1.5） |
+| `failOn: "warning"` の副作用     | 軽微な破損のある実写真まで弾かないか（design.md 5.3）                     |
+
+### 4.3 実測してから決めること
+
+**いま暫定のまま置いてあるもの。** 推測で確定させない。
+
+1. **`OCR_TO_CATEGORIZING_MS = 12_000`**（`app/upload/use-analysis.ts`）。「文字を読み取り中」→「材料を仕分け中」の切り替え。**実時間を測ってから決める**
+2. **エラー時のボタン構成**（design.md 6.2.7）。`ANALYSIS_FAILED`（写真が読めない）が大半なら「選び直す」を上に置くべきかもしれない。**どの失敗が実際に多いかを見てから**
+3. **拒否時の `fallbacks`**（tasks.md 段階4）。実際に拒否が出るようなら、ユーザーに確認してから導入する
+
+### 4.4 そのあと: Phase 3（recipe-view）
+
+**着手前にユーザーへ確認すること。**
+
+- **ブランチの扱い。** `claude/recipe-analysis-9hk507` が `origin/main` より 20 コミット先行している（1章末尾）
+- **アプリ名。** デザインは S-01 のタイトルを「レシピを撮る」、実装は「レシピ帳」。**どちらが正か決まっていない**（design.md 6.2.5）
+- **`Recipe.imageUrl` に何を入れるか。** いまは S3 のキーを入れている。署名付きURLを都度作るのか、キーのままかを**表示を作る前に決める**（design.md 5.6）
+
+**Phase 3 で使える材料は揃っている。**
+
+- S-04 / S-04c / S-05 の視覚仕様は**確定済み**（`Design_引き継ぎ資料/`。design.md 6.2）
+- デザイントークンは `app/globals.css` の `@theme` に入っている
+- 「移動 / 操作 / 絞り込み」を**面の有無で描き分ける**のがこのデザインの中核ルール。**この3種以外の見た目をヘッダー・タブに足さない**
+- デザインの `qty` は DB では `amount` が正（design.md 6.2.5）
 
 ---
 
@@ -306,10 +347,14 @@ cd /c/recipe-app && while IFS= read -r line; do case "$line" in ''|'#'*) continu
 C:\recipe-app のレシピアプリの続きをやります。
 
 まず HANDOVER.md を読んでください。そのあと、そこで指示されている
-REQUIREMENTS.md / UI_DESIGN.md / .kiro/steering/ / .kiro/README.md を
-読んでから、「今どこまで終わっていて、次に何をするか」を報告してください。
+REQUIREMENTS.md / UI_DESIGN.md / .kiro/steering/ / .kiro/README.md と
+.kiro/specs/recipe-analysis/ の3ファイルを読んでから、
+「今どこまで終わっていて、次に何をするか」を報告してください。
 
-Phase 1 は完了していますが、ブランチが main にマージされていません。
-その扱いを含めて、着手前に私に確認してください。
+Phase 2 は実装が終わっていますが、実際の料理本で一度も解析していません。
+次は Phase 3 ではなく、HANDOVER.md 4章の段階12（ローカルでの実測）です。
+最初に prisma migrate が必要なことも 4.1 に書いてあります。
+
+ブランチ（origin/main より先行）の扱いを含めて、着手前に私に確認してください。
 実装はまだ始めないでください。
 ```
