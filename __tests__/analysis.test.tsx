@@ -276,3 +276,21 @@ describe("progressPercent", () => {
 function labelOf(text: string): string {
   return screen.getByText(text).className;
 }
+
+describe("読み上げへの伝達", () => {
+  /**
+   * ⚠️ 3段階のラベルは未着手のぶんも含めて最初から DOM に居るので、
+   * 段階が進んでも live region の文字列は変わらない（変わるのは class だけ）。
+   * それだと読み上げは何も起きない。
+   */
+  it("進行中の段階が文字として live region に入る", async () => {
+    const { container } = render(<PhotoPicker />);
+    const xhr = await startAnalysis(container);
+
+    expect(screen.getByText("現在: アップロード中")).toBeDefined();
+
+    await act(async () => xhr.finishUpload());
+
+    expect(screen.getByText("現在: 文字を読み取り中")).toBeDefined();
+  });
+});

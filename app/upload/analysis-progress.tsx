@@ -32,12 +32,24 @@ function stepFor(index: number, state: AnalysisState): Step {
   return index === current ? "active" : "pending";
 }
 
+/** 進行中の段階のラベル。読み上げ用 */
+function activeLabel(state: AnalysisState): string {
+  return PHASES.find((phase) => phase.key === state.phase)?.label ?? "完了";
+}
+
 export function AnalysisProgress({ state }: { state: AnalysisState }) {
   const percent = progressPercent(state);
 
   return (
     // 段階が変わったことを支援技術にも伝える。視覚的な変化だけにしない
     <div className="flex flex-1 flex-col gap-5" role="status" aria-live="polite">
+      {/*
+       * ⚠️ **これが無いと読み上げは何も起きない。** 3段階のラベルは未着手のぶんも含めて
+       * 最初から全部 DOM に居るので、段階が進んでも**この領域の文字列は変わらない**
+       * （変わるのは class だけ）。読み上げ用に「今どこか」を文字として置く。
+       */}
+      <p className="sr-only">現在: {activeLabel(state)}</p>
+
       {PHASES.map((phase, index) => {
         const step = stepFor(index, state);
 

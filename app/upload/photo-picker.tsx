@@ -252,7 +252,8 @@ export function PhotoPicker() {
             ＋
           </div>
 
-          <h2 className="text-ink text-lead font-bold">レシピの写真を選ぶ</h2>
+          {/* この画面の主見出し。h2 から始めると見出しの階層が飛ぶ */}
+          <h1 className="text-ink text-lead font-bold">レシピの写真を選ぶ</h1>
 
           {/* 説明の折り返しは 26ch まで（design.md 6.2 の空状態）。中央揃えで行が割れるのを防ぐ */}
           <p className="text-ink max-w-[26ch] text-body">
