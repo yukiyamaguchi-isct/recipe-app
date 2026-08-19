@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { AnalysisProgress } from "@/app/upload/analysis-progress";
+import { isRunning, useAnalysis } from "@/app/upload/use-analysis";
 import { ACCEPTED_MIME_TYPES, MAX_IMAGE_BYTES } from "@/lib/images/constants";
 import {
   messageFor,
@@ -11,11 +13,9 @@ import {
 } from "@/lib/images/normalize.client";
 
 /**
- * S-03 の写真選択部分。
+ * S-03 アップロード / 解析中。
  *
- * **解析の開始はまだ持たない**（段階11で追加する）。この段階の役割は
- * 「選ばせる」と「送れない写真をその場で断る」の2つだけ（`tasks.md` 段階10）。
- *
+ * 写真を選ぶ → 検証 → 解析（3段階表示）→ 結果、までを1画面で持つ。
  * 見た目は design.md 6.2 の確定仕様に従う。**色・寸法を推測で変えない。**
  */
 
@@ -42,6 +42,9 @@ export function PhotoPicker() {
   const [failure, setFailure] = useState<NormalizeFailureKind | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  const { state, start, reset } = useAnalysis();
+  const running = isRunning(state);
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,22 +70,50 @@ export function PhotoPicker() {
     }
 
     setFailure(null);
+    reset();
     setSelected({ file, previewUrl: URL.createObjectURL(file) });
   }
 
+  /** エラー表示から戻る。**写真も捨てる**（ラベルが「撮り直す」なので選び直しから始める） */
+  function retake() {
+    reset();
+    setFailure(null);
+    setSelected(null);
+  }
+
+  /*
+   * 2つの経路のエラーを1箇所に集める。
+   * - `failure`: 送る前の検証（形式違い・サイズ超過）
+   * - `state.phase === "error"`: 解析の失敗（読み取れない・タイムアウト・通信）
+   * どちらも `message` は「原因」と「次にすること」を含む（Req6）。
+   */
+  const problem =
+    failure !== null
+      ? { heading: "この写真は使えません", message: messageFor(failure) }
+      : state.phase === "error"
+        ? { heading: "読み取りを完了できませんでした", message: state.message }
+        : null;
+
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-7 p-6">
-      {/*
-       * 「移動」は面なし・枠なしで文字色 link ＋ 方向記号（design.md 6.2 の中核ルール）。
-       * hover 装飾を足さない。
-       */}
       <div>
-        <Link
-          href="/"
-          className="text-link inline-flex min-h-[var(--size-tap)] items-center text-body"
-        >
-          ← 中止
-        </Link>
+        {/*
+         * 「移動」は面なし・枠なしで文字色 link ＋ 方向記号（design.md 6.2 の中核ルール）。
+         * **解析中はリンクにしない。** 30秒待った結果を失わせない（Req5）。
+         * タブを閉じる・リロードは use-analysis.ts の beforeunload が受け持つ。
+         */}
+        {running ? (
+          <span className="text-muted inline-flex min-h-[var(--size-tap)] items-center text-body">
+            ← 中止
+          </span>
+        ) : (
+          <Link
+            href="/"
+            className="text-link inline-flex min-h-[var(--size-tap)] items-center text-body"
+          >
+            ← 中止
+          </Link>
+        )}
       </div>
 
       {/* 入力欄そのものは見せない。ボタンから click() で開く（役割が button になり操作が明確） */}
@@ -103,18 +134,47 @@ export function PhotoPicker() {
         onChange={(event) => accept(event.target.files?.[0])}
       />
 
-      {failure && (
+      {problem && (
         <div
           role="alert"
           className="border-danger-border bg-danger-soft rounded-md border px-5 py-[18px]"
         >
-          <h2 className="text-danger-ink text-lead font-bold">この写真は使えません</h2>
-          <p className="text-danger-body mt-2 text-body">{messageFor(failure)}</p>
+          <h2 className="text-danger-ink text-lead font-bold">{problem.heading}</h2>
+          <p className="text-danger-body mt-2 text-body">{problem.message}</p>
+
+          {/*
+           * ⚠️ デザイン資料はエラー枠の中に危険ボタン「撮り直す」を置いているが、**外している。**
+           * 写真は選ばれたまま残るので、下に「もう一度読み取る」と「選び直す」が既に出ている。
+           * 3つ目を足すと**「撮り直す」と「選び直す」が同じ操作になる**（design.md 6.2.7）。
+           * 検証エラーのほうも同じ理由でボタンを出さない。
+           */}
         </div>
       )}
 
-      {selected ? (
+      {state.phase === "done" && (
         <div className="flex flex-col gap-4">
+          <h1 className="text-ink text-title font-bold">読み取りました</h1>
+
+          {/*
+           * ⚠️ 暫定。本来はここで S-04c（確認モード）へ遷移する（UI_DESIGN.md 2章）。
+           * その画面は Phase 3 で作るため、Phase 2 では保存できたことだけを伝える。
+           */}
+          <div className="border-attention bg-warn-soft text-warn-ink rounded-md border px-5 py-4 text-body">
+            レシピを保存しました。読み取った内容を確認する画面は、次のフェーズで追加します。
+          </div>
+
+          <button
+            type="button"
+            onClick={retake}
+            className="bg-primary hover:bg-primary-dark h-[var(--size-tap-lg)] w-full rounded-md px-6 text-lead font-bold text-white transition-colors duration-[120ms]"
+          >
+            続けて撮る
+          </button>
+        </div>
+      )}
+
+      {selected && state.phase !== "done" && (
+        <div className="flex flex-1 flex-col gap-4">
           {/*
            * eslint-disable-next-line @next/next/no-img-element --
            * next/image は URL を最適化のために取り回すため、ブラウザ内だけで有効な
@@ -127,19 +187,43 @@ export function PhotoPicker() {
             className="border-border aspect-[4/3] w-full rounded-md border object-cover"
           />
 
-          <p className="text-ink-sub text-meta">
-            {selected.file.name}（{formatSize(selected.file.size)}）
-          </p>
+          {running ? (
+            <>
+              {/*
+               * **数字を出さない**（design.md 6.2.3、2026-08-16 ユーザー決定）。
+               * デザインは「最大30秒」、実装のタイムアウトは50秒。書けばどちらかが嘘になる。
+               */}
+              <h1 className="text-ink text-title font-bold">読み取り中</h1>
+              <AnalysisProgress state={state} />
+            </>
+          ) : (
+            <>
+              <p className="text-ink-sub text-meta">
+                {selected.file.name}（{formatSize(selected.file.size)}）
+              </p>
 
-          <button
-            type="button"
-            onClick={() => libraryInputRef.current?.click()}
-            className="text-link border-link bg-surface hover:bg-primary-soft h-[var(--size-tap-lg)] w-full rounded-md border-[1.5px] px-5 text-lead font-medium transition-colors duration-[120ms]"
-          >
-            選び直す
-          </button>
+              {/* 失敗の直後は「もう一度」であることを label に出す（体言止め・8文字以内） */}
+              <button
+                type="button"
+                onClick={() => start(selected.file)}
+                className="bg-primary hover:bg-primary-dark h-[var(--size-tap-lg)] w-full rounded-md px-6 text-lead font-bold text-white transition-colors duration-[120ms]"
+              >
+                {state.phase === "error" ? "もう一度読み取る" : "読み取る"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => libraryInputRef.current?.click()}
+                className="text-link border-link bg-surface hover:bg-primary-soft h-[var(--size-tap-lg)] w-full rounded-md border-[1.5px] px-5 text-lead font-medium transition-colors duration-[120ms]"
+              >
+                選び直す
+              </button>
+            </>
+          )}
         </div>
-      ) : (
+      )}
+
+      {!selected && state.phase !== "done" && (
         /*
          * 空状態のパターン（design.md 6.2 / handoff「空状態」）。
          * ドラッグ＆ドロップも同じ領域で受ける（Req1。PCでの主な入り口）。

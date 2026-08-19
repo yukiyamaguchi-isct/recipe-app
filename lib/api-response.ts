@@ -34,8 +34,13 @@ const STATUS: Record<string, number> = {
   STORAGE_FAILED: 502,
 };
 
-/** 想定していない例外に使う。**原因を一切明かさない**ための固定文言。 */
-const INTERNAL_ERROR: ApiError = {
+/**
+ * 想定していない例外に使う。**原因を一切明かさない**ための固定文言。
+ *
+ * **クライアント側からも読む。** レスポンスがJSONですらない場合（プロキシのエラーページ等）に
+ * 画面へ出す文言がこれと食い違わないようにするため（`app/upload/use-analysis.ts`）。
+ */
+export const INTERNAL_ERROR: ApiError = {
   code: "INTERNAL_ERROR",
   message: "問題が発生しました。しばらくしてからもう一度お試しください。",
 };

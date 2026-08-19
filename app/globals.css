@@ -71,9 +71,33 @@
   --text-display: 1.75rem; /* 28px 画面タイトル */
   --text-display--line-height: 1.4;
 
+  /*
+   * ⚠️ 引き継ぎ資料の `@theme` ブロックには無いが、コンポーネント仕様のほうで使われている2色。
+   * 出どころは同資料の「進捗表示（未着手）」「ボタン（無効）」「材料の1行表示（下境界）」。
+   * **推測した色ではない。** 資料側のトークン表が追いついていないだけ。
+   */
+  --color-muted: #8aa3ab; /* 未着手ラベル・無効ボタンの文字 */
+  --color-track: #dff1f3; /* 進捗バーのトラック・無効ボタンの面・行の下境界 */
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-full: 999px;
+
+  /*
+   * 進行中の段階の明滅（同資料「進捗表示」: `opacity .55→1` の 1.4s ease-in-out 無限）。
+   * 待ち時間が長いので「止まっていない」ことを示す唯一の手がかりになる。
+   */
+  --animate-phase: phase-pulse 1.4s ease-in-out infinite;
+
+  @keyframes phase-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
 
   --shadow-e1: 0 1px 2px rgba(11, 45, 57, 0.08); /* カード・固定ヘッダー */
   --shadow-e2: 0 4px 12px rgba(11, 45, 57, 0.12); /* FAB・ダイアログ */
@@ -98,4 +122,19 @@ body {
   color: var(--color-ink);
   /* 以前は Arial 決め打ちで、日本語が環境依存のフォールバックに落ちていた */
   font-family: var(--font-sans);
+}
+
+/*
+ * 明滅を止める設定にしている人には止める。
+ * **進捗が止まったように見えてしまうが、動きで具合が悪くなるほうが重い。**
+ * 段階の区別は丸の塗り・枠と文字の太さでも付くので、情報は失われない。
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
