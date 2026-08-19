@@ -26,6 +26,17 @@ const ACCEPT = ACCEPTED_MIME_TYPES.join(",");
 
 type Selected = { file: File; previewUrl: string };
 
+/**
+ * ファイルサイズの表示。
+ *
+ * **MB固定にすると、小さい画像が「0.0MB」になって壊れて見える。** 0.1MB未満は KB で出す。
+ */
+function formatSize(bytes: number): string {
+  const megabytes = bytes / 1024 / 1024;
+
+  return megabytes < 0.1 ? `${Math.round(bytes / 1024)}KB` : `${megabytes.toFixed(1)}MB`;
+}
+
 export function PhotoPicker() {
   const [selected, setSelected] = useState<Selected | null>(null);
   const [failure, setFailure] = useState<NormalizeFailureKind | null>(null);
@@ -117,7 +128,7 @@ export function PhotoPicker() {
           />
 
           <p className="text-ink-sub text-meta">
-            {selected.file.name}（{(selected.file.size / 1024 / 1024).toFixed(1)}MB）
+            {selected.file.name}（{formatSize(selected.file.size)}）
           </p>
 
           <button
@@ -159,7 +170,8 @@ export function PhotoPicker() {
 
           <h2 className="text-ink text-lead font-bold">レシピの写真を選ぶ</h2>
 
-          <p className="text-ink text-body">
+          {/* 説明の折り返しは 26ch まで（design.md 6.2 の空状態）。中央揃えで行が割れるのを防ぐ */}
+          <p className="text-ink max-w-[26ch] text-body">
             料理本のページ全体が入るように撮ってください。
             <br />
             {LIMIT_TEXT}

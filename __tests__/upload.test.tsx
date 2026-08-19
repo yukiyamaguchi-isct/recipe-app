@@ -154,3 +154,22 @@ describe("S-03 選択後の表示", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
   });
 });
+
+describe("ファイルサイズの表示", () => {
+  // MB 固定にすると小さい画像が「0.0MB」になり、壊れているように見える。
+  it("0.1MB 未満は KB で出す", () => {
+    const { container } = render(<PhotoPicker />);
+
+    choose(container, file("small.jpg", "image/jpeg", 48 * 1024));
+
+    expect(screen.getByText(/48KB/)).toBeDefined();
+  });
+
+  it("0.1MB 以上は MB で出す", () => {
+    const { container } = render(<PhotoPicker />);
+
+    choose(container, file("big.jpg", "image/jpeg", 3 * 1024 * 1024));
+
+    expect(screen.getByText(/3\.0MB/)).toBeDefined();
+  });
+});
