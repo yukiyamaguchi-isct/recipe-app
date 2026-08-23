@@ -262,27 +262,35 @@ export function PhotoPicker() {
             {LIMIT_TEXT}
           </p>
 
-          {/* スマホに無い操作を書かない。ドラッグの案内は横幅のある画面だけに出す */}
-          <p className="text-ink-sub hidden text-meta md:block">この枠に写真をドラッグもできます</p>
+          {/* ドラッグできるのはポインタのある端末だけ。指で操作する端末には書かない */}
+          <p className="text-ink-sub hidden text-meta pointer-fine:block">
+            この枠に写真をドラッグもできます
+          </p>
 
           <div className="flex w-full flex-col gap-2">
-            {/* 料理本をその場で撮る使い方が主（UI_DESIGN.md S-03）。スマホでは撮影を第一候補に置く */}
+            {/*
+             * ⚠️ **画面の広さでは出し分けない**（design.md 6.2.9）。
+             * `md:`（768px）で分けていたが、**iPad は縦向きで 820〜1024px あるため PC 扱いになり、
+             * カメラを持っている端末なのにカメラのボタンが消えていた。**
+             * `pointer: coarse`（指で操作する端末）で判定すれば、幅と無関係に正しく出る。
+             */}
             <button
               type="button"
               onClick={() => cameraInputRef.current?.click()}
-              className="bg-primary hover:bg-primary-dark h-[var(--size-tap-lg)] w-full rounded-md px-6 text-lead font-bold text-white transition-colors duration-[120ms] md:hidden"
+              className="bg-primary hover:bg-primary-dark hidden h-[var(--size-tap-lg)] w-full rounded-md px-6 text-lead font-bold text-white transition-colors duration-[120ms] pointer-coarse:block"
             >
               カメラで撮る
             </button>
 
             {/*
-             * スマホでは副次（撮影が第一候補）、横幅のある画面では主要（カメラを出さないため）。
+             * 既定は主要（カメラを出さない端末では唯一のボタン）。
+             * 指で操作する端末では副次に下げる（撮影が第一候補になるため）。
              * 見た目を切り替えるだけで、要素は1つに保つ。
              */}
             <button
               type="button"
               onClick={() => libraryInputRef.current?.click()}
-              className="text-link border-link bg-surface hover:bg-primary-soft md:bg-primary md:hover:bg-primary-dark h-[var(--size-tap-lg)] w-full rounded-md border-[1.5px] px-5 text-lead font-medium transition-colors duration-[120ms] md:border-transparent md:px-6 md:font-bold md:text-white"
+              className="bg-primary hover:bg-primary-dark pointer-coarse:text-link pointer-coarse:border-link pointer-coarse:bg-surface pointer-coarse:hover:bg-primary-soft h-[var(--size-tap-lg)] w-full rounded-md border-[1.5px] border-transparent px-6 text-lead font-bold text-white transition-colors duration-[120ms] pointer-coarse:px-5 pointer-coarse:font-medium"
             >
               写真を選ぶ
             </button>

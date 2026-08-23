@@ -69,6 +69,23 @@ describe("S-03 選択前の表示", () => {
     expect(screen.getByRole("button", { name: "カメラで撮る" })).toBeDefined();
   });
 
+  /**
+   * ⚠️ **画面の広さで出し分けない**（design.md 6.2.9）。
+   * `md:`（768px）で分けていたとき、**iPad は縦向きで 820〜1024px あるため PC 扱いになり、
+   * カメラを持つ端末なのにボタンが消えていた。**
+   *
+   * jsdom は Tailwind のCSSを解釈しないので、**実際の表示は確かめられない。**
+   * ここで固定できるのは「幅ではなくポインタで判定している」ことだけ。
+   */
+  it("カメラの出し分けは幅ではなくポインタで判定する", () => {
+    render(<PhotoPicker />);
+
+    const camera = screen.getByRole("button", { name: "カメラで撮る" }).className;
+
+    expect(camera).toContain("pointer-coarse:");
+    expect(camera).not.toContain("md:");
+  });
+
   it("中止で一覧へ戻れる", () => {
     render(<PhotoPicker />);
 

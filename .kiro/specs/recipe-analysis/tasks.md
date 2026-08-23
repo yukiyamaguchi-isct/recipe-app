@@ -304,7 +304,7 @@
 - **`URL.createObjectURL` は自動で解放されない。** `useEffect` のクリーンアップで、選び直しと離脱の両方で `revokeObjectURL` する。テストで固定した
 - **`next/image` は使わない。** `blob:` URL は最適化の経路と噛み合わない。`@next/next/no-img-element` は理由を書いて1箇所だけ抑制した（`--max-warnings 0` なので放置できない）
 - **`onDragOver` で `preventDefault()` を呼ばないと、ブラウザが写真を別ページとして開いてしまう。** ドロップ以前に既定動作を止める必要がある
-- **「カメラで撮る」は `md:hidden`。** `capture="environment"` はPCでは無視されて通常のファイル選択になるだけだが、PCで撮影を第一候補に出す意味が無い。「写真を選ぶ」だけ、スマホでは副次・PCでは主要に見た目を切り替えている（要素は1つのまま）
+- ~~**「カメラで撮る」は `md:hidden`。**~~ → **⚠️ この判断は間違いだった（2026-08-17 に修正）。iPad は縦向きで 820〜1024px あるため PC 扱いになり、カメラを持つ端末なのにボタンが消えていた。** `pointer: coarse` で判定するよう変更（design.md 6.2.9）
 - **隠した `input` は `<label>` ではなく `button` から `click()` で開く。** `<label>` だと role が button にならず、テストからも支援技術からも「操作」として扱われない
 - テストは jsdom に Object URL が無いため `URL.createObjectURL` / `revokeObjectURL` だけ差し替えている
 
@@ -320,7 +320,7 @@
 - ⚠️ **使い捨てルートを消した直後の `tsc` は落ちる。** `.next/types/validator.ts` が消えたページを参照したまま残るため。`npm run build` を1回通すと消える（9.1 と同じ性質）
 - ⚠️ **`curl` が localhost に届かない。** リモート実行環境の `HTTPS_PROXY` を経由してしまうので `--noproxy '*'` が要る
 - ⚠️ **`pkill -f "next start"` は自分のシェルごと殺す。** コマンド文字列自身がパターンに一致する。`ps` で `next-server` の PID を取って `kill` する
-- **実機のスマホでは未確認。** `capture="environment"` が実際にカメラを開くか、`md:hidden` の切り替わりが手元の端末で意図どおりかは段階12 で確認する
+- **実機では未確認。** `capture="environment"` が実際にカメラを開くか、`pointer-coarse:` の出し分けが手元の端末で意図どおりかは段階12 で確認する
 
 ---
 
