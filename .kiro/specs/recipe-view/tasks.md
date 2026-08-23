@@ -94,16 +94,27 @@ Phase 2 は `lib/` の部品を先に揃えて上に積んだ。Phase 3 は取�
 
 **まだタイトルしか表示しない。** 骨格を先に通して、以降の段階で中身を足す。
 
-- [ ] `app/recipes/[id]/page.tsx` を追加する（Server Component）
-- [ ] **`params` を `await` する**（落とし穴 #1）。`PageProps<"/recipes/[id]">` を使う
-- [ ] 未ログインなら `/login` へリダイレクトする。**`app/page.tsx` と同じ流儀に揃える**（落とし穴 #5）
-- [ ] 見つからなければ `notFound()`。**「存在しない」と「他人のもの」を区別しない**（落とし穴 #4）
-- [ ] `app/recipes/[id]/not-found.tsx` を追加する（日本語の説明＋**暫定ホーム `/` への戻る導線**。落とし穴 #24）
-- [ ] `npm run build` を通し、`PageProps<"/recipes/[id]">` が解決することを確認して design.md 1.2 の `⚠️` を潰す
-- [ ] `not-found.tsx` が実際にどこへ差し込まれるかを確認し、design.md 1.3 の `⚠️` を潰す
-- [ ] テスト: 未ログインで `/login` へ／存在しないIDで `notFound()`
+- [x] `app/recipes/[id]/page.tsx` を追加する（Server Component）
+- [x] **`params` を `await` する**（落とし穴 #1）。`PageProps<"/recipes/[id]">` を使う
+- [x] 未ログインなら `/login` へリダイレクトする。**`app/page.tsx` と同じ流儀に揃える**（落とし穴 #5）
+- [x] 見つからなければ `notFound()`。**「存在しない」と「他人のもの」を区別しない**（落とし穴 #4）
+- [x] `app/recipes/[id]/not-found.tsx` を追加する（日本語の説明＋**暫定ホーム `/` への戻る導線**。落とし穴 #24）
+- [x] `npm run build` を通し、`PageProps<"/recipes/[id]">` が解決することを確認して design.md 1.2 の `⚠️` を潰す
+- [x] `not-found.tsx` がビルドに含まれることを確認する（**実際の差し込み位置は段階13 へ送った**。design.md 1.3）
+- [x] テスト: 未ログインで `/login` へ／存在しないIDで `notFound()`
+- [x] **テストが欠落を実際に捕まえることを確認する**（`await` を外す / リダイレクトのガードを外す）
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
+
+### 実施時の記録
+
+- **`PageProps<"/recipes/[id]">` は、ページを作る前には解決できない。** `.next/types/routes.d.ts` の `AppRoutes` は実在するルートから生成されるため、作成前は `"/" | "/login" | "/upload"` しか無い。**「ファイルを作る → `npx next typegen` → `tsc`」の順でないと、コードが正しくても型チェックが落ちる。** `.kiro/specs/recipe-analysis/design.md` 9.1 の `LayoutProps` と同じ構図で、**新しいルートを足すたびに再発する**ので design.md 1.2 と落とし穴 #25 に書いた
+- **`npx next typegen` は `npm run build` より速い**（数秒）。ルートを足しただけなら typegen で足りる
+- **`redirect()` の戻り値は `never`**（`node_modules/next/dist/client/components/redirect.d.ts` L17-19）。おかげでガードの後に `userId` が `string` に絞り込まれ、`!` や `as string` を書かずに済む
+- **`requireUserId()` ではなく `getUserId()` + `redirect()` を使った**（落とし穴 #5）。`app/page.tsx` は `auth()` を直接呼んでいるが、あちらは `session.user.name` も要るため。**id しか要らない画面は `getUserId()` のほうが素直**
+- **`not-found.tsx` はビルドのルート表に出ない。** 出るのは `○ /_not-found`（ルート直下のもの）だけで、セグメント側は SSR チャンク（`.next/server/chunks/ssr/`）に入る。**ルート表を見て「認識されていない」と誤解しかけた**ので落とし穴 #26 に書いた
+- **`not-found.tsx` の実際の差し込み位置は自動テストで踏めない。** 認可が先に効くため、未ログインでは `/login` に飛んでそこまで到達しない。**段階13（実測）に送った**
+- **テストを2通りに壊して確認した。** `await props.params` を外すと1件、未ログインのリダイレクトを外すと2件が落ちる。確認後に戻して10件全通過を再確認
 
 ---
 

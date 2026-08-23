@@ -18,7 +18,7 @@
 >
 > | 残っている ⚠️                                             | 潰すタイミング |
 > | --------------------------------------------------------- | -------------- |
-> | `npx next typegen` 無しで `PageProps` が解決できるか      | 段階3          |
+> | `not-found.tsx` が実際にどこへ差し込まれるか              | 段階13         |
 > | 固定ヘッダーとアンカー移動の重なり（`scroll-margin-top`） | 段階7          |
 > | 現在位置の判定を `IntersectionObserver` で行えるか        | 段階8          |
 > | スクロールコンテナを `window` にするか要素にするか        | 段階7          |
@@ -66,8 +66,33 @@ export default async function Page(props: PageProps<"/blog/[slug]">) {
 ```
 
 - **`PageProps` / `LayoutProps` / `RouteContext` は `npx next typegen` が生成するグローバル型**（同 L298-301）。手書きの型定義より優先して使う（`.kiro/steering/architecture.md`）
-- **⚠️ 未検証**: 現時点で `.next/types` は空。`LayoutProps` は `npm run build` を1回通すと解決する（`.kiro/specs/recipe-analysis/design.md` 9.1）ので `PageProps<"/recipes/[id]">` も同じはず。**段階3でビルドを通して確認する**
 - **無いとどうなるか**: `params` を `await` せずに `params.id` と書くと、**型では通っても実行時に `undefined` になる。「レシピが見つかりません」が出るだけでエラーにならない**ので、原因を DB 側に探して時間を溶かす
+- **✅ テストが欠落を捕まえることを確認した**（2026-08-24、段階3）。`await props.params` を外すと「URL の id でレシピを引く」が落ちる
+
+### ⚠️ `PageProps` は「ページを作る前」には解決できない（✅ 実測 2026-08-24、段階3）
+
+**`.next/types/routes.d.ts` は実在するルートから生成される。** ページを作る前の `AppRoutes` は
+
+```ts
+type AppRoutes = "/" | "/login" | "/upload";
+```
+
+で、`PageProps<"/recipes/[id]">` は**型引数が制約を満たさず落ちる**。`npx next typegen` を回すと
+
+```ts
+type AppRoutes = "/" | "/login" | "/recipes/[id]" | "/upload";
+interface ParamMap {
+  "/recipes/[id]": { id: string }; // ← ここから params の型が来る
+}
+```
+
+に変わり、初めて解決する。**順序が効く。**
+
+1. `app/recipes/[id]/page.tsx` を作る
+2. `npx next typegen`（または `npm run build`）
+3. `npx tsc --noEmit`
+
+**2 を飛ばして 3 をやると、コードが正しくても落ちる。** `.kiro/specs/recipe-analysis/design.md` 9.1 の `LayoutProps` と同じ構図で、**新しいルートを足すたびに再発する。**
 
 ## 1.3 `notFound()` の実体（📄 出典）
 
@@ -79,7 +104,8 @@ export declare function notFound(): never;
 `node_modules/next/navigation.d.ts` が `./dist/client/components/navigation` を re-export しており、そこから辿れる。**戻り値が `never`** なので、呼んだ後のコードは型の上でも到達しない。
 
 - 対になるファイル規約は `not-found.tsx`（`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/not-found.md`）
-- **⚠️ 未検証**: `app/recipes/[id]/not-found.tsx` がレイアウトのどこに差し込まれるか。**段階3で実際に開いて確認する**
+- **✅ ビルドに含まれることは確認した**（2026-08-24、段階3）。`app/recipes/[id]/not-found.tsx` の文言は SSR チャンク（`.next/server/chunks/ssr/`）に入る。**ルート表には出ない**（`○ /_not-found` はルート直下のもの）ので、ルート表だけ見て「認識されていない」と誤解しない
+- **⚠️ 未検証**: 実際に開いたときレイアウトのどこに差し込まれるか。**認可が先に効くのでログイン状態でないと到達できず、自動テストでは踏めない。段階13（実測）で確認する**
 
 ## 1.4 Prisma の関連取得と並び順（📄 出典＋✅ 実測 2026-08-24、段階2）
 
@@ -542,6 +568,8 @@ export async function PATCH(request: Request, context: RouteContext<"/api/recipe
 | 22  | Route Handler の `params` を `await` しない            | `page.js` と同じく Route Handler の `params` も Promise                             | 1.2 / 5.6             |
 | 23  | ヘッダー上段を「空の段」として高さだけ残す             | Phase 3 では中身が両方とも無い。**段ごと描かない**                                  | 6.1                   |
 | 24  | `not-found.tsx` を行き止まりにする                     | `← 一覧` が Phase 3 に無いため、戻る手段が消える                                    | 7.1                   |
+| 25  | ページを作った直後に `tsc` を回す                      | **`PageProps<"/新ルート">` は typegen 前だと解決しない。** コードが正しくても落ちる | 1.2                   |
+| 26  | ルート表に `not-found` が出ないので効いていないと思う  | `not-found.tsx` はルートではない。**SSR チャンクに入る**                            | 1.3                   |
 | 17  | Tailwind のトークン名を打ち間違える                    | **ビルドは通り、そのCSSだけ静かに空になる。** 成果物のCSSで確認する                 | recipe-analysis 6.2.6 |
 | 18  | `--size-tap` から `h-tap` が生えると思う               | Tailwind v4 に `--size-*` の名前空間は無い。`h-[var(--size-tap)]` と書く            | recipe-analysis 6.2.6 |
 
