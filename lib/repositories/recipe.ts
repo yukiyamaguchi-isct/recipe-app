@@ -1,9 +1,9 @@
-import type { Recipe } from "@/generated/prisma/client";
+import type { Ingredient, Recipe, Step } from "@/generated/prisma/client";
 import type { RecipeAnalysis } from "@/lib/clients/claude";
 import { prisma } from "@/lib/prisma";
 
 /**
- * レシピの保存。
+ * レシピの保存と取得。
  *
  * **この層は Prisma だけを知る**（`.kiro/steering/architecture.md`）。
  * セッションも HTTP も知らないので、`userId` は引数で受け取る。
@@ -47,6 +47,44 @@ export async function saveRecipe({ userId, imageKey, analysis }: SaveRecipeInput
           order: index,
         })),
       },
+    },
+  });
+}
+
+/** 画面（S-04 / S-04c）が必要とする形。材料と手順を `order` の昇順で持つ。 */
+export type RecipeWithDetails = Recipe & {
+  ingredients: Ingredient[];
+  steps: Step[];
+};
+
+/**
+ * レシピ1件を取得する。**他人のレシピは null になる。**
+ *
+ * `where` に `userId` を入れるのが要点（`.kiro/steering/architecture.md` の
+ * 「レシピは必ず userId でスコープする」）。
+ *
+ * **`findUnique({ where: { id } })` で取ってから `recipe.userId === userId` を
+ * 確認する形にしない。** 所有チェックがクエリの外に出ると、書き忘れても動いてしまい、
+ * 自分のレシピしか作らないテストでは全部通ってしまう（design.md 落とし穴 #2）。
+ *
+ * `findUnique` ではなく `findFirst` なのは、`{ id, userId }` が一意制約ではないため。
+ * `findUnique` は主キーか一意制約でしか引けない。
+ *
+ * **見分け方**: 別ユーザーの userId で呼んで null が返ること。レコードが返ったら
+ * スコープが外れている。
+ */
+export async function findRecipeForUser(
+  userId: string,
+  recipeId: string,
+): Promise<RecipeWithDetails | null> {
+  return prisma.recipe.findFirst({
+    where: { id: recipeId, userId },
+    include: {
+      // order は Claude が返した配列の添字で、原文の順序そのもの（design.md 2章）。
+      // 指定しないと DB が返す順序に依存し、手元では偶然正しく見えて後で崩れる。
+      // 📄 出典: generated/prisma/models/Recipe.ts L1683（Recipe$ingredientsArgs.orderBy）
+      ingredients: { orderBy: { order: "asc" } },
+      steps: { orderBy: { order: "asc" } },
     },
   });
 }

@@ -69,16 +69,24 @@ Phase 2 は `lib/` の部品を先に揃えて上に積んだ。Phase 3 は取�
 
 ## 段階2: `userId` でスコープしてレシピ1件を取る `findRecipeForUser()` を `lib/repositories/recipe.ts` に追加する
 
-- [ ] `findRecipeForUser(userId, recipeId)` を追加する（design.md 5.1）
-- [ ] **`where` に `userId` を入れる。** `findUnique` で取ってから確認する形にしない（落とし穴 #2）
-- [ ] `include` の中で `ingredients` / `steps` を `order` の昇順に指定する（落とし穴 #3）
-- [ ] `generated/prisma` の型定義を見て `include` 内 `orderBy` の書き方を確認し、design.md 1.4 の `⚠️` を潰す
-- [ ] テスト: **他人の `userId` では `null` が返る**／材料・手順が `order` の昇順で返る／存在しないIDで `null`
-- [ ] 既存の `__tests__/recipe-repository.test.ts` の Prisma モックの流儀に合わせる
+- [x] `findRecipeForUser(userId, recipeId)` を追加する（design.md 5.1）
+- [x] **`where` に `userId` を入れる。** `findUnique` で取ってから確認する形にしない（落とし穴 #2）
+- [x] `include` の中で `ingredients` / `steps` を `order` の昇順に指定する（落とし穴 #3）
+- [x] `generated/prisma` の型定義を見て `include` 内 `orderBy` の書き方を確認し、design.md 1.4 の `⚠️` を潰す
+- [x] テスト: **他人の `userId` では `null` が返る**／材料・手順が `order` の昇順で返る／存在しないIDで `null`
+- [x] 既存の `__tests__/recipe-repository.test.ts` の Prisma モックの流儀に合わせる
+- [x] **テストが欠落を実際に捕まえることを確認する**（`userId` を抜く / `orderBy` を外す）
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` が終了コード0
 
 > **⚠️ 「他人のレシピが `null` になる」テストは必ず書く。** `where` から `userId` を落としても、自分のレシピしか作らないテストは全部通る。**このテストだけが防波堤になる。**
+
+### 実施時の記録
+
+- **`include` 内の `orderBy` は使える。** `generated/prisma/models/Recipe.ts` L1669-1685 の `Recipe$ingredientsArgs` に `orderBy?: IngredientOrderByWithRelationInput | ...[]` がある。`RecipeInclude`（同 L805-810）が `boolean | Recipe$ingredientsArgs` を受けるため `ingredients: { orderBy: { order: "asc" } }` と書ける。design.md 1.4 を `⚠️ 未検証` → `📄 出典＋✅ 実測` に置き換えた
+- **テストを2通りに壊して、実際に落ちることを確認した。** `where` から `userId` を抜くと2件（「where に userId が入っている」「他人の userId をそのまま where に渡す」）、`orderBy` を外すと2件（「材料を order の昇順で取る」「並び順を DB 任せにしない」）が落ちる。**確認後に戻し、12件すべて通ることを再確認した**
+- **テストファイルは `__tests__/recipe-find.test.ts` として分けた。** 既存の `recipe-repository.test.ts` は `vi.mock("@/lib/prisma", ...)` で `recipe.create` だけを生やしているため、同じファイルに `findFirst` を足すと**モックの形が両方のテストに影響する**。取得と保存で別ファイルにするほうが、どちらのクエリを見ているか読んで分かる
+- **「存在しない」と「他人のもの」で戻り値が同じであることをテストで固定した**（design.md 5.2）。**この2つはコード上も区別していない**ので、将来どちらかだけ別扱いにしようとすると、このテストが落ちて気づける
 
 ---
 

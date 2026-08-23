@@ -19,7 +19,6 @@
 > | 残っている ⚠️                                             | 潰すタイミング |
 > | --------------------------------------------------------- | -------------- |
 > | `npx next typegen` 無しで `PageProps` が解決できるか      | 段階3          |
-> | Prisma の `include` 内 `orderBy` が意図どおり効くか       | 段階2          |
 > | 固定ヘッダーとアンカー移動の重なり（`scroll-margin-top`） | 段階7          |
 > | 現在位置の判定を `IntersectionObserver` で行えるか        | 段階8          |
 > | スクロールコンテナを `window` にするか要素にするか        | 段階7          |
@@ -82,13 +81,26 @@ export declare function notFound(): never;
 - 対になるファイル規約は `not-found.tsx`（`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/not-found.md`）
 - **⚠️ 未検証**: `app/recipes/[id]/not-found.tsx` がレイアウトのどこに差し込まれるか。**段階3で実際に開いて確認する**
 
-## 1.4 Prisma の関連取得と並び順（⚠️ 未検証）
+## 1.4 Prisma の関連取得と並び順（📄 出典＋✅ 実測 2026-08-24、段階2）
 
 材料と手順は `order` の昇順で出す必要がある（requirements.md Req1）。**`order` に入っているのは Claude が返した配列の添字**で、原文の順序そのもの（`.kiro/specs/recipe-analysis/design.md` 2章）。
 
-`findFirst` の `include` の中で `orderBy` を指定する形を想定しているが、**Prisma 7 の生成クライアントで実際に効くことを確認していない。** 段階2で `generated/prisma` の型定義を見てから書く。
+**`include` の中で `orderBy` を指定できる。** 生成された型に定義がある。
 
-- **無いとどうなるか**: 並び順を指定しないと DB が返す順序に依存する。**手元では偶然正しく見えて、行が増えたときに崩れる**種類の失敗。テストで昇順を固定する
+```ts
+// 📄 出典: generated/prisma/models/Recipe.ts L1669-1685
+export type Recipe$ingredientsArgs<...> = {
+  select?: ...
+  where?: Prisma.IngredientWhereInput
+  orderBy?: Prisma.IngredientOrderByWithRelationInput | Prisma.IngredientOrderByWithRelationInput[]
+  ...
+}
+```
+
+`RecipeInclude`（同 L805-810）の `ingredients` / `steps` が `boolean | Recipe$ingredientsArgs` を受けるため、`ingredients: true` の代わりに `ingredients: { orderBy: { order: "asc" } }` と書ける。
+
+- **無いとどうなるか**: 並び順を指定しないと DB が返す順序に依存する。**手元では偶然正しく見えて、行が増えたときに崩れる**種類の失敗
+- **✅ テストが欠落を捕まえることを確認した**（2026-08-24）。`ingredients: { orderBy: ... }` を `ingredients: true` に変えると2件が落ちる（「材料を order の昇順で取る」「並び順を DB 任せにしない」）。確認後に戻した
 
 ## 1.5 【Phase 4 向け】署名付きURLの決定事項（2026-08-23 ユーザー決定）
 
