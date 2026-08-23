@@ -91,13 +91,13 @@ tasks.md の記録自体は消さない（どの段階で何が分かったか�
 
 `.kiro/specs/` に置く機能フォルダと、その実装順序。
 
-| #   | feature           | 内容                                               | 状態                    |
-| --- | ----------------- | -------------------------------------------------- | ----------------------- |
-| 0   | `foundation`      | Next.js雛形、Prisma+Neon接続、Prettier、Vitest     | **完了**                |
-| 1   | `user-auth`       | Googleアカウント認証（Auth.js）、セッション（JWT） | **完了**                |
-| 2   | `recipe-analysis` | 画像アップロード→リサイズ→S3→Claude解析→保存       | **実装完了 / 実測未了** |
-| 3   | `recipe-view`     | レシピ表示（確認モード / 通常モード）              | 未着手                  |
-| 4   | `recipe-list`     | 一覧、空状態、削除                                 | 未着手                  |
-| 5   | `recipe-edit`     | 材料・分量・カテゴリ・手順の編集                   | 未着手                  |
+| #   | feature           | 内容                                               | 状態     |
+| --- | ----------------- | -------------------------------------------------- | -------- |
+| 0   | `foundation`      | Next.js雛形、Prisma+Neon接続、Prettier、Vitest     | **完了** |
+| 1   | `user-auth`       | Googleアカウント認証（Auth.js）、セッション（JWT） | **完了** |
+| 2   | `recipe-analysis` | 画像アップロード→リサイズ→S3→Claude解析→保存       | **完了** |
+| 3   | `recipe-view`     | レシピ表示（確認モード / 通常モード）              | 未着手   |
+| 4   | `recipe-list`     | 一覧、空状態、削除                                 | 未着手   |
+| 5   | `recipe-edit`     | 材料・分量・カテゴリ・手順の編集                   | 未着手   |
 
-> **⚠️ `recipe-analysis` を「完了」にしていない理由。** 段階1〜11（実装とテスト）は終わっているが、**実際の料理本で一度も解析していない**。`.env` の実値がユーザーのローカルにしかないため、リモート実行環境では実行できない。残っているのは `.kiro/specs/recipe-analysis/tasks.md` の段階12 と、`prisma migrate` の生成物。詳細は `HANDOVER.md`。
+> **`recipe-analysis` は 2026-08-23 に完了。** 実際の料理本で読み取り・3分類・人数・分量を確認し、**Vercel 本番にデプロイして写真1枚が最後まで通った**。本番URL: `https://recipe-app-nu-liart.vercel.app`

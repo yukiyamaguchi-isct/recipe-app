@@ -8,9 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-**Phase 1（user-auth）完了 / Phase 2（recipe-analysis）未着手**（2026-08-15 時点）。
+**Phase 2（recipe-analysis）完了 / Phase 3（recipe-view）未着手**（2026-08-23 時点）。
 
-Google アカウントでログインでき、未ログインでは保護されたページを開けない。**実機で確認済み。** レシピに関する機能はまだ無い。
+写真をアップロードすると Claude が材料と作り方を読み取り、3分類して保存するところまで動く。**Vercel 本番へデプロイ済みで、スマホからも使える**（`https://recipe-app-nu-liart.vercel.app`）。
+
+**読み取った内容を表示する画面はまだ無い。** 解析後は「保存しました」と出るだけで、中身は Prisma Studio でしか見られない。そこを作るのが Phase 3。
 
 **セッションを引き継いだ場合は `HANDOVER.md` を最初に読むこと。** 現在地・未決事項・次の作業がまとまっている。
 
@@ -27,10 +29,11 @@ recipe-app/
 │   └── specs/<feature>/       # 機能ごとの requirements / design / tasks
 ├── auth.ts                    # Auth.js の設定
 ├── proxy.ts                   # 未ログイン時の先回りリダイレクト
-├── app/                       # login / ホーム / api/auth
-├── lib/                       # prisma.ts, errors.ts, auth/session.ts
-├── prisma/                    # schema.prisma とマイグレーション2本
-├── __tests__/                 # テスト19件
+├── app/                       # login / ホーム / upload(S-03) / api/auth / api/recipes/analyze
+├── lib/                       # prisma, errors, api-response, auth/, images/, clients/, repositories/, services/
+├── scripts/check-s3.mjs       # `npm run check:s3`。S3の設定だけを1秒で試す
+├── prisma/                    # schema.prisma とマイグレーション4本
+├── __tests__/                 # テスト239件
 ├── kiro-personal-app-guide.md      # Kiroフレームワークの参考ガイド
 ├── kiro-ai-prompts-template.md     # 同上（プロンプト集）
 └── CLAUDE.md
@@ -38,11 +41,18 @@ recipe-app/
 
 ### 次にやること
 
-**Phase 2（recipe-analysis）**。着手前に以下が必要。詳細は `HANDOVER.md` の4章。
+**Phase 3（recipe-view）**。レシピ表示（S-04 / S-04c）。詳細は `HANDOVER.md` の4章。
 
-- **ユーザーの手作業**: `ANTHROPIC_API_KEY` / AWS S3 の3変数（`SETUP.md` の Phase 2）
-- **ブランチ方針の確認**: Phase 1 のブランチが `main` にマージされていない（`HANDOVER.md` 1章末尾）
-- **調査**: Claude API のモデルIDと制約値（`claude-api` skill）、`sharp` の Vercel 対応
+- **視覚仕様は確定済み**（`Design_引き継ぎ資料/`）。トークンは `app/globals.css` の `@theme` に導入済み
+- **着手前に確認すること**: ブランチ方針と、**サムネイルの出し方**（DBには S3 のキーが入っているので、表示のたびに署名付きURLを発行する実装が要る）
+- **暫定のまま残しているもの**が4つある（`HANDOVER.md` 4.3）。推測で確定させない
+
+### 本番環境
+
+- **本番URL: `https://recipe-app-nu-liart.vercel.app`**（Vercel）
+- **ローカルと本番が同じ Neon の DB を見ている**
+- **⚠️ マイグレーションは Vercel では自動実行されない。** スキーマを変えたら**ローカルで `npx prisma migrate dev` を実行してから**コミット・push する
+- **環境変数は2箇所ある。** ローカルの `.env` と Vercel の Settings → Environment Variables。**片方だけ直しても本番は変わらない**
 
 ### 認証まわりの落とし穴
 
