@@ -54,7 +54,9 @@ model Recipe {
   id          String       @id @default(cuid())
   userId      String
   title       String
-  imageUrl    String
+  // S3 のオブジェクトキー。**URLではない**（バケットは非公開で、表示用URLは参照時に署名付きで作る）。
+  // 2026-08-17 に imageUrl から改名。名前と中身が食い違っていたため（design.md 5.6）
+  imageKey    String
   // 何人分か。デザインの「材料（4人分）」の見出しに使う。
   // 数値で持つ（2026-08-16 ユーザー決定）。「2〜3人分」のような幅のある表記や
   // 人数が書かれていないレシピは null にして、見出しから人数を省く。

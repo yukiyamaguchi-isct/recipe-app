@@ -185,7 +185,7 @@ Account                   # Auth.js が管理。Googleとの紐づけ
 Recipe
 ├── id
 ├── user_id             # 所有ユーザー
-├── image_url          # アップロード画像
+├── image_key          # アップロード画像のS3キー（2026-08-17に image_url から改名）
 ├── title               # レシピ名（自動生成、手動編集可）
 ├── servings            # 何人分（Phase 2 で追加）。数値1つに落とせない場合は null
 ├── created_at

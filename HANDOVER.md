@@ -258,7 +258,7 @@ npx prisma migrate dev --name add_recipe_servings
 
 - **ブランチの扱い。** `claude/recipe-analysis-9hk507` が `origin/main` より 20 コミット先行している（1章末尾）
 - ~~**アプリ名**~~ → **✅ 決着。`Cooking Instructor`**（2026-08-17）。3箇所に反映済み
-- **`Recipe.imageUrl` に何を入れるか。** いまは S3 のキーを入れている。署名付きURLを都度作るのか、キーのままかを**表示を作る前に決める**（design.md 5.6）
+- ~~**`Recipe.imageUrl` に何を入れるか**~~ → **✅ 決着。列名を `imageKey` に改名した**（2026-08-17）。中身は S3 のキー。**署名付きURLの発行は Phase 3 のスコープ**（design.md 5.6）
 
 **Phase 3 で使える材料は揃っている。**
 

@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 export type SaveRecipeInput = {
   /** **呼び出し側がセッションから取る。** ここでは検証しない（Route Handler の責務） */
   userId: string;
-  /** S3 のオブジェクトキー（`lib/clients/s3.ts`）。URLではない（design.md 5.6） */
+  /** S3 のオブジェクトキー（`lib/clients/s3.ts`）。**URLではない**（design.md 5.6） */
   imageKey: string;
   analysis: RecipeAnalysis;
 };
@@ -31,7 +31,7 @@ export async function saveRecipe({ userId, imageKey, analysis }: SaveRecipeInput
     data: {
       userId,
       title: analysis.title,
-      imageUrl: imageKey,
+      imageKey,
       servings: analysis.servings,
       ingredients: {
         create: analysis.ingredients.map((ingredient, index) => ({

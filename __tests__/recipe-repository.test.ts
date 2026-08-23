@@ -57,10 +57,10 @@ describe("saveRecipe", () => {
     expect(lastData().userId).toBe(INPUT.userId);
   });
 
-  it("S3 のキーを imageUrl に入れる（design.md 5.6 の暫定）", async () => {
+  it("S3 のキーを imageKey に入れる（design.md 5.6）", async () => {
     await saveRecipe(INPUT);
 
-    expect(lastData().imageUrl).toBe(INPUT.imageKey);
+    expect(lastData().imageKey).toBe(INPUT.imageKey);
   });
 
   it("タイトルと人数をそのまま保存する", async () => {

@@ -19,7 +19,7 @@ describe("Prisma スキーマ", () => {
       "id",
       "userId",
       "title",
-      "imageUrl",
+      "imageKey",
       // 何人分か。デザインの「材料（4人分）」の見出しに使う（design.md 6.2.4）
       "servings",
       "createdAt",
