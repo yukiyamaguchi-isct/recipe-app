@@ -55,3 +55,15 @@ describe("ホーム", () => {
     expect(redirectMock).toHaveBeenCalledWith("/login");
   });
 });
+
+describe("S-03 への導線（暫定）", () => {
+  // これが無いと URL 直打ちでしか S-03 に辿り着けず、実機で確認できない。
+  // Phase 4 で S-02 の FAB に置き換わる。
+  it("写真を撮るから /upload へ行ける", async () => {
+    authMock.mockResolvedValue({ user: { id: "user_123", email: "test@example.com" } });
+
+    render(await Home());
+
+    expect(screen.getByRole("link", { name: "写真を撮る" }).getAttribute("href")).toBe("/upload");
+  });
+});

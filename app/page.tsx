@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth, signOut } from "@/auth";
@@ -28,8 +29,19 @@ export default async function Home() {
         </p>
 
         <p className="mt-6 text-sm leading-6 text-zinc-600">
-          レシピの一覧はこの画面に表示されるようになります。写真のアップロードは次のフェーズで追加します。
+          レシピの一覧はこの画面に表示されるようになります。
         </p>
+
+        {/*
+         * ⚠️ 暫定の導線。**Phase 4 で S-02（一覧）の FAB に置き換わる**（UI_DESIGN.md S-02）。
+         * これが無いと S-03 へ辿り着く方法が URL 直打ちしか無く、実機で確認できない。
+         */}
+        <Link
+          href="/upload"
+          className="bg-primary hover:bg-primary-dark mt-6 flex h-[var(--size-tap-lg)] w-full items-center justify-center rounded-md px-6 text-lead font-bold text-white transition-colors duration-[120ms]"
+        >
+          写真を撮る
+        </Link>
 
         <form
           action={async () => {
