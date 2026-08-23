@@ -13,7 +13,8 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "check:s3": "node scripts/check-s3.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
