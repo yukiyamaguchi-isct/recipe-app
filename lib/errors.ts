@@ -112,7 +112,11 @@ export class StorageFailedError extends AppError {
   constructor(options?: { cause?: unknown }) {
     super(
       "STORAGE_FAILED",
-      "画像の保存に失敗しました。通信環境を確認して、もう一度お試しください。",
+      // ⚠️ 以前は「通信環境を確認して」だった。**実際に踏んだ失敗は設定の不一致**
+      // （`AWS_REGION` がバケットと違う）で、通信環境は無関係。原因を誤って断定しない。
+      // 詳細（バケット名・リージョン）は内部情報なので出せないため、Phase 1 の
+      // OAuthCreateAccount と同じ「時間をおいて → 管理者へ」の形に揃える。
+      "画像の保存に失敗しました。時間をおいて試しても直らない場合は、管理者にお問い合わせください。",
       options,
     );
   }
