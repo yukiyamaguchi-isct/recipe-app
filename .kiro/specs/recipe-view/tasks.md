@@ -120,12 +120,24 @@ Phase 2 は `lib/` の部品を先に揃えて上に積んだ。Phase 3 は取�
 
 ## 段階4: 作り方の手順を番号付きで表示する
 
-- [ ] `components/recipes/step-list.tsx` を追加する（**`components/` の置き場所をここで最終決定する**。design.md 3章の ⚠️）
-- [ ] `order` の昇順で、1からの連番で描く
-- [ ] 視覚仕様を当てる（番号=40px角の丸 / 面 `--color-primary-soft` / 文字 `--color-link` 19px 700、本文 17px **lh1.9** / `text-wrap: pretty`、項目間 20〜24px）
-- [ ] テスト: 全件が昇順で出る／連番が1から始まる
+- [x] `app/recipes/[id]/step-list.tsx` を追加する（**`components/` を新設せず同居させると決めた**。design.md 3.1）
+- [x] `order` の昇順で、1からの連番で描く
+- [x] 視覚仕様を当てる（番号=40px角の丸 / 面 `--color-primary-soft` / 文字 `--color-link` 19px 700、本文 17px **lh1.9** / `text-wrap: pretty`、項目間 20〜24px）
+- [x] テスト: 全件が昇順で出る／連番が1から始まる／手順が空でも落ちない
+- [x] **ビルド後のCSSで、使ったクラスが実際に値を持つことを確認する**（落とし穴 #17）
+- [x] **テストが欠落を実際に捕まえることを確認する**（`index + 1` を `step.order` にする）
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
+
+### 実施時の記録
+
+- **`components/recipes/` の新設をやめ、`app/recipes/[id]/` に同居させた**（design.md 3.1）。着手前の案を変えている。新設の根拠だった「S-04 と S-04c が共有する」は、**両者が同じルートの `mode` 違い**なので同居でも成立する。もう一つの「Phase 5 でも使う見込み」は**まだ利用者が居ない**。`tech-stack.md` の「必要になるまで入れない」に揃えた
+- **`app/upload/` に前例があった**（`photo-picker.tsx` / `analysis-progress.tsx` / `use-analysis.ts`）。置き場所を2種類に増やさずに済む
+- **番号は `order` ではなく配列の添字+1 で振る。** `order` は 0 始まりなので、そのまま出すと「0. じゃがいもを切る」になる。テストで固定した（`step.order` に変えると落ちることを確認済み）
+- **`<ol>` で描いた。** 番号は丸い面に乗せる必要があり `<ol>` の自動採番は使えないが、**読み上げに順序が伝わるのは順序リストだけ**なので要素は `<ol>` のまま、数字は `aria-hidden` の `<span>` で描いている
+- **行間 1.9 は `--text-body` の既定（1.8）と違う。** `text-body` だけでは 1.8 になるので `leading-[1.9]` で上書きした。**デザインの確定値なので勝手に 1.8 に寄せない**
+- **ビルド後のCSSで8クラスすべてが値を持つことを確認した**（落とし穴 #17 対策）。`.bg-primary-soft{background-color:var(--color-primary-soft)}` / `.size-10{width:calc(var(--spacing) * 10);...}`（= 40px、仕様どおり）/ `line-height:1.9` / `.text-pretty{text-wrap:pretty}` など。**打ち間違えるとビルドは通り、そのCSSだけ静かに空になる**ので毎回見る
+- **本番ビルドのCSSは `.next/static/chunks/*.css`。** `.next/static/css/` は存在しない。`.next/dev/` の下にあるのは開発用で別物
 
 ---
 

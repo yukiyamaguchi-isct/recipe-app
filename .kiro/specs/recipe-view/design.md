@@ -169,15 +169,13 @@ enum Category    { SEASONING, VEGETABLE, OTHER }
 app/
 ├── recipes/[id]/
 │   ├── page.tsx          # S-04 / S-04c の入口。Server Component。認可と取得
-│   └── not-found.tsx     # Req6 の画面
+│   ├── not-found.tsx     # Req6 の画面
+│   ├── recipe-header.tsx # 固定ヘッダー。**Phase 3 は上段が無く2段**（requirements.md 決着2・3）
+│   ├── recipe-title.tsx  # タイトル＋ ✎ のインライン改名（Req7）
+│   ├── ingredient-list.tsx # 絞り込みタブ＋カテゴリ見出し＋材料行
+│   └── step-list.tsx     # 手順リスト
 └── api/recipes/[id]/
     └── route.ts          # PATCH。タイトルの変更（Req7）
-components/recipes/       # ← 新設
-├── recipe-view.tsx       # 画面全体。mode: "view" | "confirm" を受け取る
-├── recipe-header.tsx     # 固定ヘッダー。**Phase 3 は上段が無く2段**（requirements.md 決着2・3）
-├── recipe-title.tsx      # タイトル＋ ✎ のインライン改名（Req7）
-├── ingredient-list.tsx   # 絞り込みタブ＋カテゴリ見出し＋材料行
-└── step-list.tsx         # 手順リスト
 lib/repositories/
 └── recipe.ts             # findRecipeForUser() / updateRecipeTitle() を追加
 ```
@@ -188,7 +186,23 @@ lib/repositories/
 - **更新（Req7）だけは Route Handler が要る。** ブラウザからの操作で、`app/api/recipes/analyze/route.ts` に続く2つ目の保護付きエンドポイントになる
 - **Service 層は置かない。** タイトルの更新に、検証と保存以外のビジネスロジックが無いため
 
-> **⚠️ `components/` はこのプロジェクトで初めて作るディレクトリ。** Phase 2 までは画面ごとのファイルを `app/<screen>/` の中に置いていた（`app/upload/photo-picker.tsx` など）。**S-04 と S-04c が同じコンポーネントを共有し、Phase 5 の S-05 からも一部を使う見込みがある**ため画面フォルダの外に出す。段階4 で置き場所を最終決定する。
+## 3.1 ✅ 決着: `components/` を新設せず、ルートに同居させる（2026-08-24、段階4）
+
+**着手前の案は `components/recipes/` の新設だったが、採らなかった。**
+
+| 案                                     | 判断                                                                                                                 |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **`app/recipes/[id]/` に同居**（採用） | Phase 2 の `app/upload/`（`photo-picker.tsx` / `analysis-progress.tsx` / `use-analysis.ts`）と同じ形。**前例がある** |
+| `components/recipes/` を新設           | 置き場所が2種類になる。**共有する相手がまだ居ない**                                                                  |
+
+**理由。** 新設案の根拠は「S-04 と S-04c が共有する」「Phase 5 の S-05 からも使う見込み」の2つだったが、
+
+- **S-04 と S-04c は同じルート**（`/recipes/[id]`）の `mode` 違いで、別画面ではない。同居していても共有できる
+- **Phase 5 で本当に要るかは、まだ分からない。** `tech-stack.md` の「状態管理ライブラリは必要になるまで入れない」と同じ判断で、**2つ目の利用者が現れてから動かす**
+
+**Phase 5 で S-05 が別ルートになり、材料行を共有したくなったら、そのとき `components/` へ移す。** それまでは置き場所を1種類に保つ。
+
+> **App Router で `app/` 配下に置いても問題ない。** ルートとして解釈されるのは `page` / `layout` / `route` / `not-found` などの予約ファイル名だけで、それ以外はただのモジュール（Phase 2 で実証済み）。
 
 ---
 
