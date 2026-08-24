@@ -156,6 +156,13 @@
  */
 :root {
   --recipe-header-h: 112px;
+
+  /*
+   * 確認モード（S-04c）の最下部固定バーの高さ。本文の下余白がこれを参照する。
+   * **無いと最後の手順がバーに隠れる**（design.md 落とし穴 #11）。
+   * 実際の高さは `confirm-bar.tsx` が測って上書きする。
+   */
+  --recipe-bottom-bar-h: 96px;
 }
 
 body {

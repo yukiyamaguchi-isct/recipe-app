@@ -2,19 +2,27 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // vi.mock のファクトリは巻き上げられるため、参照するモックも vi.hoisted で巻き上げる。
-const { getUserIdMock, findRecipeMock, redirectMock, notFoundMock } = vi.hoisted(() => ({
-  getUserIdMock: vi.fn(),
-  findRecipeMock: vi.fn(),
-  redirectMock: vi.fn(),
-  notFoundMock: vi.fn(),
-}));
+const { getUserIdMock, findRecipeMock, redirectMock, notFoundMock, replaceMock } = vi.hoisted(
+  () => ({
+    getUserIdMock: vi.fn(),
+    findRecipeMock: vi.fn(),
+    redirectMock: vi.fn(),
+    notFoundMock: vi.fn(),
+    replaceMock: vi.fn(),
+  }),
+);
 
 // 実体を読むと lib/prisma.ts が評価され、DATABASE_URL 未設定の環境で落ちる。
 vi.mock("@/lib/auth/session", () => ({ getUserId: getUserIdMock, requireUserId: vi.fn() }));
 vi.mock("@/lib/repositories/recipe", () => ({ findRecipeForUser: findRecipeMock }));
 
 // 本物の redirect() / notFound() は例外を投げて描画を中断する。その挙動を再現する。
-vi.mock("next/navigation", () => ({ redirect: redirectMock, notFound: notFoundMock }));
+// useRouter は確認モードの ConfirmBar が使う。
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+  notFound: notFoundMock,
+  useRouter: () => ({ replace: replaceMock }),
+}));
 
 import RecipeNotFound from "@/app/recipes/[id]/not-found";
 import RecipePage from "@/app/recipes/[id]/page";
@@ -34,9 +42,9 @@ const RECIPE = {
   steps: [],
 };
 
-/** `PageProps` と同じ形（params は Promise）を作る。 */
-function props(id = RECIPE_ID) {
-  return { params: Promise.resolve({ id }), searchParams: Promise.resolve({}) };
+/** `PageProps` と同じ形（params / searchParams とも Promise）を作る。 */
+function props(id = RECIPE_ID, searchParams: Record<string, string> = {}) {
+  return { params: Promise.resolve({ id }), searchParams: Promise.resolve(searchParams) };
 }
 
 beforeEach(() => {
@@ -44,6 +52,7 @@ beforeEach(() => {
   findRecipeMock.mockReset();
   redirectMock.mockReset();
   notFoundMock.mockReset();
+  replaceMock.mockReset();
 
   getUserIdMock.mockResolvedValue(USER_ID);
   findRecipeMock.mockResolvedValue(RECIPE);
@@ -174,5 +183,49 @@ describe("固定ヘッダー", () => {
     // 実際に隠れないかは実機でしか分からない。ここでは「入れ忘れ」だけを止める
     expect(container.querySelector("#ingredients")?.className).toMatch(/scroll-mt-/);
     expect(container.querySelector("#steps")?.className).toMatch(/scroll-mt-/);
+  });
+});
+
+/**
+ * 確認モード（S-04c / requirements.md Req5）。
+ *
+ * **同じ画面の状態違い。** クエリ `?confirm=1` で切り替える（design.md 6.8）。
+ */
+describe("確認モード", () => {
+  it("?confirm があるとバナーと最下部バーが出る", async () => {
+    render(await RecipePage(props(RECIPE_ID, { confirm: "1" })));
+
+    expect(screen.getByText("確認画面 — 内容をチェック")).toBeDefined();
+    expect(screen.getByRole("button", { name: "この内容で決定" })).toBeDefined();
+  });
+
+  it("クエリが無ければどちらも出ない", async () => {
+    render(await RecipePage(props()));
+
+    expect(screen.queryByText("確認画面 — 内容をチェック")).toBeNull();
+    expect(screen.queryByRole("button", { name: "この内容で決定" })).toBeNull();
+  });
+
+  it("確認モードでも材料と作り方は同じように出る（同一表示）", async () => {
+    render(await RecipePage(props(RECIPE_ID, { confirm: "1" })));
+
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("肉じゃが");
+    expect(screen.getByRole("link", { name: "材料 ↓" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "作り方 ↓" })).toBeDefined();
+  });
+
+  it("確認モードのときだけ本文に下余白を足す（落とし穴 #11）", async () => {
+    const { container } = render(await RecipePage(props(RECIPE_ID, { confirm: "1" })));
+
+    // 無いと最後の手順が固定バーに隠れる
+    expect(container.querySelector("main")?.className).toMatch(
+      /pb-\[var\(--recipe-bottom-bar-h\)\]/,
+    );
+  });
+
+  it("通常モードでは下余白を足さない", async () => {
+    const { container } = render(await RecipePage(props()));
+
+    expect(container.querySelector("main")?.className).not.toMatch(/recipe-bottom-bar-h/);
   });
 });

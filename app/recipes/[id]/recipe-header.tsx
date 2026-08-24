@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { RecipeViewMode } from "./mode";
 import { RecipeTitle } from "./recipe-title";
 
 /**
@@ -28,6 +29,8 @@ type Props = {
   recipeId: string;
   /** 初期のタイトル。**改名するとここではなく `title` の state が正になる** */
   title: string;
+  /** `confirm` なら確認バナーを載せる。**別コンポーネントに分けない**（落とし穴 #12） */
+  mode: RecipeViewMode;
 };
 
 /**
@@ -37,7 +40,7 @@ type Props = {
  * `fixed` にすると本文の先頭がヘッダーに隠れ、その分の `padding-top` を手で足すことになり、
  * ヘッダーの高さが変わるたびにズレる。
  */
-export function RecipeHeader({ recipeId, title: initialTitle }: Props) {
+export function RecipeHeader({ recipeId, title: initialTitle, mode }: Props) {
   const headerRef = useRef<HTMLElement>(null);
   const [current, setCurrent] = useState<Section>("ingredients");
 
@@ -110,6 +113,21 @@ export function RecipeHeader({ recipeId, title: initialTitle }: Props) {
       ref={headerRef}
       className="bg-header border-border shadow-e1 sticky top-0 z-10 border-b"
     >
+      {/*
+       * 確認バナー（design.md 6.1）。**ヘッダーの中に入れる。**
+       *
+       * デザインのモックではバナーがヘッダーの上に別要素として乗っているが、
+       * あれはスマホ枠の中で両方が固定されている前提。実アプリでスクロールするのは
+       * window なので、**別々に sticky させるとバナーの高さぶんの調整が要る。**
+       * 中に入れれば1つの sticky ブロックになり、`--recipe-header-h` の実測値にも
+       * 自動的に含まれる（アンカーの着地点がずれない）。
+       */}
+      {mode === "confirm" && (
+        <p className="border-attention bg-warn-soft text-warn-ink border-b px-4 py-3.5 text-body font-bold">
+          確認画面 — 内容をチェック
+        </p>
+      )}
+
       <div className="mx-auto w-full max-w-[640px]">
         {/*
          * 中段: タイトル 22px/700/lh1.4 ＋ `✎ 改題`。仕様の padding は 0 16px 8px だが、
