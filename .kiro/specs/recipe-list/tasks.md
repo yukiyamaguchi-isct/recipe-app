@@ -68,12 +68,20 @@
 
 ## 段階2: S3 のキーから表示用の署名付きURLを発行できるようにする
 
-- [ ] `lib/clients/s3.ts` に `getRecipeImageUrl()` と `IMAGE_URL_EXPIRES_IN_SECONDS` を追加する
-- [ ] 既存の `getClient()` を再利用する（**新しいクライアントを作らない**）
-- [ ] `S3_BUCKET_NAME` 未設定のとき `StorageFailedError` を投げる（**バケット名を文言に含めない**）
-- [ ] `__tests__/s3-client.test.ts` に追加: **`expiresIn` に `3600` を渡している**／バケット未設定で `StorageFailedError`
+- [x] `lib/clients/s3.ts` に `getRecipeImageUrl()` と `IMAGE_URL_EXPIRES_IN_SECONDS` を追加する
+- [x] 既存の `getClient()` を再利用する（**新しいクライアントを作らない**）
+- [x] `S3_BUCKET_NAME` 未設定のとき `StorageFailedError` を投げる（**バケット名を文言に含めない**）
+- [x] `__tests__/s3-client.test.ts` に追加: **`expiresIn` に `3600` を渡している**／バケット未設定で `StorageFailedError`
 
 **受け入れ基準**: 検証コマンドが全部0。テストが `expiresIn: 3600` を固定している
+
+### 実施時の記録
+
+- **テストは 406件 → 415件**（`s3-client.test.ts` が 19件 → 28件）。**`it.each` の1行が5件に展開されるので、`it(` の数を数えると合わない**
+- **落とし穴 #1 を捕まえられることを実際に確かめた。** 定数を `3600000` に書き換えて `npx vitest run __tests__/s3-client.test.ts` を走らせ、**2件が落ちる**ことを確認してから戻した。**通ることではなく、間違えたときに落ちることを確認する**（`.kiro/README.md` 4「コードを見ずに真偽が決まる基準」）
+- **署名の計算そのものはテストしていない。** AWS SDK の責務なので `getSignedUrl` を関数ごとモックし、**こちらが何を渡しているか**（`GetObjectCommand` の `Bucket` / `Key`、`expiresIn` の単位）だけを固定した
+- **「S3 へ送信しない」テストを入れた。** `sendMock` が呼ばれないことを見ている。署名がローカル計算であるという 1.1 の前提（＝全件まとめて発行してよい根拠）が、実装で崩れていないことの担保になる
+- **`getSignedUrl` の第3引数を `toEqual({ expiresIn: 3600 })` で見ている。** `toMatchObject` にすると、**余計なオプションを足しても通ってしまう**
 
 ---
 
