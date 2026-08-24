@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getUserId } from "@/lib/auth/session";
 import { findRecipeForUser } from "@/lib/repositories/recipe";
 
+import { IngredientList } from "./ingredient-list";
 import { StepList } from "./step-list";
 
 /**
@@ -43,6 +44,7 @@ export default async function RecipePage(props: PageProps<"/recipes/[id]">) {
     <main className="mx-auto flex w-full max-w-[640px] flex-col gap-4 px-4 py-5">
       <h1 className="text-ink text-title font-bold">{recipe.title}</h1>
 
+      <IngredientList ingredients={recipe.ingredients} servings={recipe.servings} />
       <StepList steps={recipe.steps} />
     </main>
   );
