@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * jsdom には Canvas のデコードが無いので、ブラウザ側の正規化だけ差し替える。
  * **検証（`validateSelectedFile`）は本物を使う。** そこを潰すと画面の分岐が確かめられない。
  */
+// vi.mock のファクトリは巻き上げられるため、参照するモックも vi.hoisted で巻き上げる。
+const { replaceMock } = vi.hoisted(() => ({ replaceMock: vi.fn() }));
+
+// useRouter は解析完了後の遷移（段階12）で PhotoPicker が使う。
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: replaceMock }) }));
+
 vi.mock("@/lib/images/normalize.client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/images/normalize.client")>();
 
@@ -75,6 +81,7 @@ class FakeXhr {
 beforeEach(() => {
   vi.useFakeTimers();
   FakeXhr.last = null;
+  replaceMock.mockReset();
   vi.stubGlobal("XMLHttpRequest", FakeXhr);
   URL.createObjectURL = vi.fn(() => "blob:preview");
   URL.revokeObjectURL = vi.fn();
@@ -165,6 +172,64 @@ describe("S-03 解析の結果", () => {
     });
 
     expect(screen.getByText("読み取りました")).toBeDefined();
+  });
+
+  /**
+   * 段階12。**Phase 2 はここで「保存しました」と出して止まっていた。**
+   * `UI_DESIGN.md` 2章の S-03 → S-04c を繋ぐ（requirements.md Req5）。
+   */
+  it("成功したら確認モード（S-04c）へ遷移する", async () => {
+    const { container } = render(<PhotoPicker />);
+    const xhr = await startAnalysis(container);
+
+    await act(async () => {
+      xhr.finishUpload();
+      xhr.respond(200, { success: true, data: { recipeId: "rec_1" }, error: null });
+    });
+
+    expect(replaceMock).toHaveBeenCalledWith("/recipes/rec_1?confirm=1");
+  });
+
+  it("遷移は replace（戻るで白紙のアップロード画面に戻さない）", async () => {
+    const { container } = render(<PhotoPicker />);
+    const xhr = await startAnalysis(container);
+
+    await act(async () => {
+      xhr.finishUpload();
+      xhr.respond(200, { success: true, data: { recipeId: "rec_1" }, error: null });
+    });
+
+    // push を使うと、確認画面から戻ったときに何も選ばれていない S-03 が出る
+    expect(replaceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("すぐ消える画面に操作を置かない（続けて撮るを出さない）", async () => {
+    const { container } = render(<PhotoPicker />);
+    const xhr = await startAnalysis(container);
+
+    await act(async () => {
+      xhr.finishUpload();
+      xhr.respond(200, { success: true, data: { recipeId: "rec_1" }, error: null });
+    });
+
+    expect(screen.queryByRole("button", { name: "続けて撮る" })).toBeNull();
+  });
+
+  it("失敗したときは遷移しない", async () => {
+    const { container } = render(<PhotoPicker />);
+    const xhr = await startAnalysis(container);
+    const failure = new AnalysisFailedError();
+
+    await act(async () => {
+      xhr.finishUpload();
+      xhr.respond(422, {
+        success: false,
+        data: null,
+        error: { code: failure.code, message: failure.message },
+      });
+    });
+
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 
   // Req6。サーバーの文言をそのまま出す（原因と次にすることの両方が入っている）。

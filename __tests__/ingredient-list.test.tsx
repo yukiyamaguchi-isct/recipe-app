@@ -1,0 +1,412 @@
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import { IngredientList } from "@/app/recipes/[id]/ingredient-list";
+import { Category } from "@/generated/prisma/client";
+
+const RECIPE_ID = "clr1a2b3c4d5e6f7g8h9";
+
+/**
+ * `findRecipeForUser` が返す形（`order` の昇順）。
+ * **カテゴリ順には並んでいない**（保存は原文の順序。design.md 2章）。
+ */
+const INGREDIENTS = [
+  {
+    id: "i1",
+    recipeId: RECIPE_ID,
+    name: "じゃがいも",
+    amount: "3個",
+    category: Category.VEGETABLE,
+    order: 0,
+  },
+  {
+    id: "i2",
+    recipeId: RECIPE_ID,
+    name: "牛こま切れ肉",
+    amount: "200g",
+    category: Category.OTHER,
+    order: 1,
+  },
+  {
+    id: "i3",
+    recipeId: RECIPE_ID,
+    name: "しょうゆ",
+    amount: "大さじ2",
+    category: Category.SEASONING,
+    order: 2,
+  },
+  {
+    id: "i4",
+    recipeId: RECIPE_ID,
+    name: "玉ねぎ",
+    amount: "1個",
+    category: Category.VEGETABLE,
+    order: 3,
+  },
+  {
+    id: "i5",
+    recipeId: RECIPE_ID,
+    name: "こしょう",
+    amount: "少々",
+    category: Category.SEASONING,
+    order: 4,
+  },
+];
+
+describe("IngredientList", () => {
+  it("材料を全件表示する", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+  });
+
+  it("材料名を表示する", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getByText("じゃがいも")).toBeDefined();
+    expect(screen.getByText("牛こま切れ肉")).toBeDefined();
+  });
+
+  it("分量をそのままの文字列で表示する（requirements.md Req1）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    // 「少々」を数値に直したりしない
+    expect(screen.getByText("少々")).toBeDefined();
+    expect(screen.getByText("大さじ2")).toBeDefined();
+  });
+
+  it("分量が無い材料でも材料名が出る", () => {
+    render(
+      <IngredientList
+        ingredients={[
+          {
+            id: "x",
+            recipeId: RECIPE_ID,
+            name: "塩",
+            amount: null,
+            category: Category.SEASONING,
+            order: 0,
+          },
+        ]}
+        servings={null}
+      />,
+    );
+
+    expect(screen.getByText("塩")).toBeDefined();
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+});
+
+/**
+ * 見出しの人数（design.md 5.5 / 落とし穴 #7）。
+ * **読み取れなかった人数を勝手な数字で埋めない。**
+ */
+describe("見出しの人数", () => {
+  it("servings があれば「材料（4人分）」", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("材料（4人分）");
+  });
+
+  it("servings が null なら「材料」だけで、数字が出ない", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={null} />);
+
+    const heading = screen.getByRole("heading", { level: 2 });
+
+    expect(heading.textContent).toBe("材料");
+    expect(heading.textContent).not.toMatch(/[0-9０-９]/);
+  });
+
+  it("servings が 1 でも丸めずそのまま出す", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={1} />);
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("材料（1人分）");
+  });
+});
+
+/**
+ * カテゴリの並び（design.md 5.4 / 落とし穴 #6）。
+ *
+ * **`schema.prisma` の enum は SEASONING / VEGETABLE / OTHER の順**で、
+ * 画面の 野菜 / 調味料 / その他 とは違う。enum 順に依存していないことを固定する。
+ */
+describe("カテゴリの並び", () => {
+  it("野菜 → 調味料 → その他 の順で並べる", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const labels = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+
+    expect(labels[0]).toContain("野菜");
+    expect(labels[1]).toContain("調味料");
+    expect(labels[2]).toContain("その他");
+  });
+
+  it("enum の宣言順（調味料が先）にならない", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const labels = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+
+    expect(labels[0]).not.toContain("調味料");
+  });
+
+  it("材料をカテゴリごとにまとめる", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const vegetables = screen.getByRole("heading", { level: 3, name: /野菜/ }).parentElement;
+
+    expect(within(vegetables as HTMLElement).getByText("じゃがいも")).toBeDefined();
+    expect(within(vegetables as HTMLElement).getByText("玉ねぎ")).toBeDefined();
+  });
+
+  it("カテゴリ内では order の順序を保つ（並べ替えない）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const vegetables = screen.getByRole("heading", { level: 3, name: /野菜/ }).parentElement;
+    const names = within(vegetables as HTMLElement)
+      .getAllByRole("listitem")
+      .map((li) => li.textContent);
+
+    expect(names[0]).toContain("じゃがいも");
+    expect(names[1]).toContain("玉ねぎ");
+  });
+
+  it("カテゴリ見出しに件数を出す", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getByRole("heading", { level: 3, name: /野菜/ }).textContent).toContain("2");
+  });
+
+  it("材料が1件も無いカテゴリは見出しごと出さない", () => {
+    render(
+      <IngredientList
+        ingredients={[
+          {
+            id: "x",
+            recipeId: RECIPE_ID,
+            name: "塩",
+            amount: null,
+            category: Category.SEASONING,
+            order: 0,
+          },
+        ]}
+        servings={null}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { level: 3, name: /野菜/ })).toBeNull();
+    expect(screen.getByRole("heading", { level: 3, name: /調味料/ })).toBeDefined();
+  });
+});
+
+describe("段階7 のページ内移動の着地点", () => {
+  it("セクションに id=ingredients を置く", () => {
+    const { container } = render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(container.querySelector("#ingredients")).not.toBeNull();
+  });
+});
+
+describe("材料が無いレシピ", () => {
+  // Phase 2 は材料も手順も空のまま保存できる（recipe-repository.test.ts で固定済み）。
+  it("空でも落ちず、その旨を表示する", () => {
+    render(<IngredientList ingredients={[]} servings={null} />);
+
+    expect(screen.getByText("材料が登録されていません。")).toBeDefined();
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  it("空でも見出しは出す", () => {
+    render(<IngredientList ingredients={[]} servings={4} />);
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("材料（4人分）");
+  });
+});
+
+/**
+ * 絞り込み（requirements.md Req2 / design.md 6.2）。
+ *
+ * **既定は「全体」で、常にどれか1つが点灯する。**「選択なし」の状態は作らない。
+ */
+describe("絞り込みタブ", () => {
+  it("4つのタブを 全体 / 野菜 / 調味料 / その他 の順で出す", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const labels = screen.getAllByRole("button").map((b) => b.textContent);
+
+    expect(labels).toEqual(["全体", "野菜", "調味料", "その他"]);
+  });
+
+  it("開いた直後は「全体」が選択されている", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getByRole("button", { name: "全体" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("開いた直後は全カテゴリの材料が見えている", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+  });
+
+  it("常にどれか1つだけが点灯する（選択なしを作らない）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    const pressed = screen
+      .getAllByRole("button")
+      .filter((b) => b.getAttribute("aria-pressed") === "true");
+
+    expect(pressed).toHaveLength(1);
+    expect(pressed[0].textContent).toBe("野菜");
+  });
+
+  it("同じタブをもう一度押しても選択が外れない", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const vegetable = screen.getByRole("button", { name: "野菜" });
+    fireEvent.click(vegetable);
+    fireEvent.click(vegetable);
+
+    expect(vegetable.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+});
+
+describe("絞り込みの結果", () => {
+  it("「野菜」を押すと野菜だけになり、他カテゴリの行が消える", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getByText("じゃがいも")).toBeDefined();
+    expect(screen.queryByText("しょうゆ")).toBeNull();
+    expect(screen.queryByText("牛こま切れ肉")).toBeNull();
+  });
+
+  it("絞り込んでもカテゴリ内の順序を保つ", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    const names = screen.getAllByRole("listitem").map((li) => li.textContent);
+
+    expect(names[0]).toContain("じゃがいも");
+    expect(names[1]).toContain("玉ねぎ");
+  });
+
+  it("1カテゴリだけのときはカテゴリ見出しを重ねない（点灯したピルが示している）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+  });
+
+  it("「全体」に戻すと全件に戻る", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "調味料" }));
+    fireEvent.click(screen.getByRole("button", { name: "全体" }));
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
+  });
+
+  it("該当0件のカテゴリを選ぶと、空白ではなくその旨が出る", () => {
+    render(
+      <IngredientList
+        ingredients={[
+          {
+            id: "x",
+            recipeId: RECIPE_ID,
+            name: "塩",
+            amount: null,
+            category: Category.SEASONING,
+            order: 0,
+          },
+        ]}
+        servings={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    expect(screen.getByText("該当する材料はありません。")).toBeDefined();
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  it("見出しの人数は絞り込みで変わらない", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "その他" }));
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("材料（4人分）");
+  });
+});
+
+describe("材料が1件も無いレシピでは絞り込みを出さない", () => {
+  it("タブそのものが出ない（押しても何も起きない操作を置かない）", () => {
+    render(<IngredientList ingredients={[]} servings={null} />);
+
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+});
+
+/**
+ * 行の左右（design.md 6.5）。
+ *
+ * **引き継ぎ資料は「分量が左」だったが、2026-08-24 にユーザーが実機で見て逆に決めた。**
+ * 資料側の記述だけを見て元に戻されないよう、ここで固定する。
+ */
+describe("材料行の左右", () => {
+  it("材料名が左、分量が右の順で並ぶ", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const row = screen.getByText("じゃがいも").closest("li");
+    const cells = Array.from(row?.children ?? []).map((el) => el.textContent);
+
+    expect(cells).toEqual(["じゃがいも", "3個"]);
+  });
+
+  it("分量は右寄せのまま（右端で桁が揃う）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const row = screen.getByText("じゃがいも").closest("li");
+    const amount = row?.children[1];
+
+    expect(amount?.className).toMatch(/\btext-right\b/);
+  });
+
+  it("材料名は左寄せ（右寄せのクラスを当てない）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const row = screen.getByText("じゃがいも").closest("li");
+    const name = row?.children[0];
+
+    expect(name?.className).not.toMatch(/\btext-right\b/);
+  });
+
+  it("分量が無い行でも、材料名が左に来る", () => {
+    render(
+      <IngredientList
+        ingredients={[
+          {
+            id: "x",
+            recipeId: RECIPE_ID,
+            name: "塩",
+            amount: null,
+            category: Category.SEASONING,
+            order: 0,
+          },
+        ]}
+        servings={null}
+      />,
+    );
+
+    const row = screen.getByText("塩").closest("li");
+
+    expect(row?.children[0].textContent).toBe("塩");
+  });
+});

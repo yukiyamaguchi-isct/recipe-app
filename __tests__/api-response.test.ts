@@ -91,10 +91,14 @@ describe("エラーコードと HTTP ステータスの対応（design.md 5.4）
     );
 
     // 取りこぼしていないことの確認。増えたらこの数も増える。
-    expect(subclasses).toHaveLength(8);
+    // Phase 2: 8 → Phase 3 で ValidationError / RecipeNotFoundError を追加して 10。
+    expect(subclasses).toHaveLength(10);
 
     for (const Subclass of subclasses) {
-      // どのサブクラスも引数なしで作れる（message は各クラスが固定で持つ）。
+      // ⚠️ ほとんどのサブクラスは message を固定で持つが、`ValidationError` だけは
+      // 引数で受け取る（recipe-view design.md 5.6）。ここで見たいのは `code` と
+      // ステータスの対応だけなので、引数なしで作って構わない
+      // （message が undefined でも code は設定される）。
       const error = new (Subclass as new () => AppError)();
       expect(statusFor(error.code), `${error.code} が対応表に無い`).not.toBe(500);
     }

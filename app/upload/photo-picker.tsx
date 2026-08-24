@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { confirmPath } from "@/app/recipes/[id]/mode";
 import { AnalysisProgress } from "@/app/upload/analysis-progress";
 import { isRunning, useAnalysis } from "@/app/upload/use-analysis";
 import { ACCEPTED_MIME_TYPES, MAX_IMAGE_BYTES } from "@/lib/images/constants";
@@ -44,6 +46,26 @@ export function PhotoPicker() {
 
   const { state, start, reset } = useAnalysis();
   const running = isRunning(state);
+  const router = useRouter();
+
+  /*
+   * 解析が終わったら確認モード（S-04c）へ送る（`UI_DESIGN.md` 2章 / requirements.md Req5）。
+   *
+   * **Phase 2 はここで「保存しました」と出して止まっていた。**
+   *
+   * `push` ではなく `replace`。**アップロード画面は役目を終えている**ので、
+   * 確認画面から戻るボタンで白紙の S-03 に戻すより、その手前へ返すほうが素直。
+   *
+   * **レシピは既に保存済み**（Phase 2 が確認画面の前に保存する設計）。
+   * 遷移に失敗しても解析結果は失われない。
+   */
+  const doneRecipeId = state.phase === "done" ? state.recipeId : null;
+
+  useEffect(() => {
+    if (doneRecipeId !== null) {
+      router.replace(confirmPath(doneRecipeId));
+    }
+  }, [doneRecipeId, router]);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
@@ -72,13 +94,6 @@ export function PhotoPicker() {
     setFailure(null);
     reset();
     setSelected({ file, previewUrl: URL.createObjectURL(file) });
-  }
-
-  /** エラー表示から戻る。**写真も捨てる**（ラベルが「撮り直す」なので選び直しから始める） */
-  function retake() {
-    reset();
-    setFailure(null);
-    setSelected(null);
   }
 
   /*
@@ -152,24 +167,13 @@ export function PhotoPicker() {
       )}
 
       {state.phase === "done" && (
+        /*
+         * 遷移が始まるまでの一瞬だけ出る。**ここに操作を置かない。**
+         * すぐ消える画面にボタンがあると、押せたり押せなかったりする。
+         */
         <div className="flex flex-col gap-4">
           <h1 className="text-ink text-title font-bold">読み取りました</h1>
-
-          {/*
-           * ⚠️ 暫定。本来はここで S-04c（確認モード）へ遷移する（UI_DESIGN.md 2章）。
-           * その画面は Phase 3 で作るため、Phase 2 では保存できたことだけを伝える。
-           */}
-          <div className="border-attention bg-warn-soft text-warn-ink rounded-md border px-5 py-4 text-body">
-            レシピを保存しました。読み取った内容を確認する画面は、次のフェーズで追加します。
-          </div>
-
-          <button
-            type="button"
-            onClick={retake}
-            className="bg-primary hover:bg-primary-dark h-[var(--size-tap-lg)] w-full rounded-md px-6 text-lead font-bold text-white transition-colors duration-[120ms]"
-          >
-            続けて撮る
-          </button>
+          <p className="text-ink-sub text-body">確認画面へ移動しています…</p>
         </div>
       )}
 

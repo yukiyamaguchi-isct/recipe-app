@@ -46,3 +46,8 @@ next-env.d.ts
 
 # prisma generated client（コミットしない。postinstall で再生成される）
 /generated
+#passを忘れたとき用のリカバリーレコードを入れたフォルダ
+/recovery-codes
+
+# 手元で実測に使うレシピ写真（コミットしない。リポジトリにバイナリを残さないため）
+/IMG_*.jpg

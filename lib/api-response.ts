@@ -32,6 +32,10 @@ const STATUS: Record<string, number> = {
   ANALYSIS_REFUSED: 422,
   ANALYSIS_TIMEOUT: 504,
   STORAGE_FAILED: 502,
+  // ---- Phase 3 ----
+  VALIDATION_ERROR: 400,
+  // 「存在しない」と「他人のもの」の両方。**区別しない**（recipe-view design.md 5.2）
+  RECIPE_NOT_FOUND: 404,
 };
 
 /**
