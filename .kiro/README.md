@@ -96,8 +96,12 @@ tasks.md の記録自体は消さない（どの段階で何が分かったか�
 | 0   | `foundation`      | Next.js雛形、Prisma+Neon接続、Prettier、Vitest     | **完了** |
 | 1   | `user-auth`       | Googleアカウント認証（Auth.js）、セッション（JWT） | **完了** |
 | 2   | `recipe-analysis` | 画像アップロード→リサイズ→S3→Claude解析→保存       | **完了** |
-| 3   | `recipe-view`     | レシピ表示（確認モード / 通常モード）              | 未着手   |
+| 3   | `recipe-view`     | レシピ表示（確認モード / 通常モード）              | **完了** |
 | 4   | `recipe-list`     | 一覧、空状態、削除                                 | 未着手   |
 | 5   | `recipe-edit`     | 材料・分量・カテゴリ・手順の編集                   | 未着手   |
 
 > **`recipe-analysis` は 2026-08-23 に完了。** 実際の料理本で読み取り・3分類・人数・分量を確認し、**Vercel 本番にデプロイして写真1枚が最後まで通った**。本番URL: `https://recipe-app-nu-liart.vercel.app`
+
+> **`recipe-view` は 2026-08-25 に完了。** レシピ表示（S-04）・確認モード（S-04c）・材料の4タブ絞り込み・固定ヘッダー・タイトルのインライン改名までを実装し、**`/upload` から確認画面までが本番で1本に繋がった**。テストは 239件 → **406件**。
+>
+> **⚠️ Phase 4 の最初の仕事は、ヘッダー上段（`← 一覧`）を戻すこと。** Phase 3 では遷移先の S-02 が無いため上段ごと描いていない（`.kiro/specs/recipe-view/design.md` 6.4）。

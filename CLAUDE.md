@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-**Phase 2（recipe-analysis）完了 / Phase 3（recipe-view）未着手**（2026-08-23 時点）。
+**Phase 3（recipe-view）完了 / Phase 4（recipe-list）未着手**（2026-08-25 時点）。
 
-写真をアップロードすると Claude が材料と作り方を読み取り、3分類して保存するところまで動く。**Vercel 本番へデプロイ済みで、スマホからも使える**（`https://recipe-app-nu-liart.vercel.app`）。
+写真をアップロードすると Claude が材料と作り方を読み取り、3分類して保存し、**そのまま確認画面（S-04c）に着地する**。保存したレシピは `/recipes/[id]` で読める（材料の4タブ絞り込み・固定ヘッダー・タイトルのその場改名まで）。**Vercel 本番へデプロイ済みで、スマホから通しで動く**（`https://recipe-app-nu-liart.vercel.app`）。
 
-**読み取った内容を表示する画面はまだ無い。** 解析後は「保存しました」と出るだけで、中身は Prisma Studio でしか見られない。そこを作るのが Phase 3。
+**まだ無いのはレシピの一覧（S-02）。** ログイン後のホームは暫定のままで、保存済みレシピを一覧する画面が無い。そこを作るのが Phase 4。
 
 **セッションを引き継いだ場合は `HANDOVER.md` を最初に読むこと。** 現在地・未決事項・次の作業がまとまっている。
 
@@ -29,11 +29,11 @@ recipe-app/
 │   └── specs/<feature>/       # 機能ごとの requirements / design / tasks
 ├── auth.ts                    # Auth.js の設定
 ├── proxy.ts                   # 未ログイン時の先回りリダイレクト
-├── app/                       # login / ホーム / upload(S-03) / api/auth / api/recipes/analyze
+├── app/                       # login / ホーム / upload(S-03) / recipes/[id](S-04・S-04c) / api/auth / api/recipes
 ├── lib/                       # prisma, errors, api-response, auth/, images/, clients/, repositories/, services/
 ├── scripts/check-s3.mjs       # `npm run check:s3`。S3の設定だけを1秒で試す
 ├── prisma/                    # schema.prisma とマイグレーション4本
-├── __tests__/                 # テスト239件
+├── __tests__/                 # テスト406件
 ├── kiro-personal-app-guide.md      # Kiroフレームワークの参考ガイド
 ├── kiro-ai-prompts-template.md     # 同上（プロンプト集）
 └── CLAUDE.md
@@ -41,11 +41,11 @@ recipe-app/
 
 ### 次にやること
 
-**Phase 3（recipe-view）**。レシピ表示（S-04 / S-04c）。詳細は `HANDOVER.md` の4章。
+**Phase 4（recipe-list）**。レシピ一覧（S-02）。詳細は `HANDOVER.md` の4章。
 
 - **視覚仕様は確定済み**（`Design_引き継ぎ資料/`）。トークンは `app/globals.css` の `@theme` に導入済み
-- **着手前に確認すること**: ブランチ方針と、**サムネイルの出し方**（DBには S3 のキーが入っているので、表示のたびに署名付きURLを発行する実装が要る）
-- **暫定のまま残しているもの**が4つある（`HANDOVER.md` 4.3）。推測で確定させない
+- **技術的な山はサムネイルの表示。** DBには S3 のキーが入っているので、**表示のたびに署名付きURLを発行する**実装が要る（方針は決定済み。`HANDOVER.md` 4.1）
+- **Phase 4 の最初の仕事は S-04 のヘッダー上段（`← 一覧`）を戻すこと。** Phase 3 では遷移先が無いため上段ごと描いていない（`HANDOVER.md` 4.2）
 
 ### 本番環境
 
