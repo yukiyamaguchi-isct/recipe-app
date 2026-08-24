@@ -19,3 +19,18 @@ export const CONFIRM_PARAM = "confirm";
 export function modeFromSearchParams(params: Record<string, string | string[] | undefined>) {
   return params[CONFIRM_PARAM] === undefined ? "view" : ("confirm" as const);
 }
+
+/** 通常モードのパス。 */
+export function recipePath(recipeId: string): string {
+  return `/recipes/${recipeId}`;
+}
+
+/**
+ * 確認モードのパス。
+ *
+ * **解析直後の着地先**（`UI_DESIGN.md` 2章: S-03 → S-04c）。
+ * `/upload` と `ConfirmBar` の両方がここを通す。**クエリ名を各所に直書きしない。**
+ */
+export function confirmPath(recipeId: string): string {
+  return `${recipePath(recipeId)}?${CONFIRM_PARAM}=1`;
+}

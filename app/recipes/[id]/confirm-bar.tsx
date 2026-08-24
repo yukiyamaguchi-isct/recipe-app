@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { recipePath } from "./mode";
+
 /**
  * 確認モード（S-04c）の最下部固定バー（`UI_DESIGN.md` S-04c / design.md 6.1）。
  *
@@ -66,7 +68,7 @@ export function ConfirmBar({ recipeId }: Props) {
    * 確認モードに戻ってこない**。読み終えた画面へ戻す意味が無いため。
    */
   function confirm() {
-    router.replace(`/recipes/${recipeId}`);
+    router.replace(recipePath(recipeId));
   }
 
   return (

@@ -2,14 +2,19 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // vi.mock のファクトリは巻き上げられるため、参照するモックも vi.hoisted で巻き上げる。
-const { authMock, redirectMock } = vi.hoisted(() => ({
+const { authMock, redirectMock, replaceMock } = vi.hoisted(() => ({
+  replaceMock: vi.fn(),
   authMock: vi.fn(),
   redirectMock: vi.fn(),
 }));
 
 // @/auth を実体で読むと lib/prisma.ts が評価され、DATABASE_URL 未設定で落ちる。
 vi.mock("@/auth", () => ({ auth: authMock }));
-vi.mock("next/navigation", () => ({ redirect: redirectMock }));
+// useRouter は解析完了後の遷移（段階12）で PhotoPicker が使う。
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+  useRouter: () => ({ replace: replaceMock }),
+}));
 
 import UploadPage from "@/app/upload/page";
 import { PhotoPicker } from "@/app/upload/photo-picker";
