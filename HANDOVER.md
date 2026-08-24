@@ -405,8 +405,7 @@ Phase 3 では遷移先の S-02 が無く、`編集` の S-05 も Phase 5 のた
 ## 8. 新しいチャットに最初に貼る文（コピー用）
 
 ```
-C:
-ecipe-app のレシピアプリの続きをやります。Phase 4（recipe-list）です。
+C:\recipe-app のレシピアプリの続きをやります。Phase 4（recipe-list）です。
 
 まず HANDOVER.md を読んでください。そのあと、そこで指示されている
 REQUIREMENTS.md / UI_DESIGN.md / .kiro/steering/ / .kiro/README.md と、
