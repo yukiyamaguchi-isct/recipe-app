@@ -74,21 +74,29 @@ function headingText(servings: number | null): string {
   return servings === null ? "材料" : `材料（${servings}人分）`;
 }
 
-/** 材料1行。**分量が左、材料名が右**（design.md 落とし穴 #8）。 */
+/**
+ * 材料1行。**材料名が左（左寄せ）、分量が右（右寄せ）**。
+ *
+ * ⚠️ **引き継ぎ資料とは左右が逆。** 資料は「分量が左」で、理由を
+ * 「買い物中に数量だけを縦に追えるようにするため」としていた。
+ * **2026-08-24 にユーザーが実機で見て、名前を左にすると決定**（design.md 6.5）。
+ * **元に戻さない。**
+ *
+ * 数量は**右寄せ・幅固定のまま**にしてあるので、右端で桁が揃い、
+ * 縦に追う利点は右側で残る。
+ */
 function IngredientRow({ ingredient }: { ingredient: Ingredient }) {
   return (
     <li className="border-track flex items-baseline gap-4 border-b px-[18px] py-4">
+      {/* 材料名: 可変幅・左寄せ。長い名前はここで折り返す */}
+      <span className="text-ink flex-1 text-lead leading-[1.6] text-pretty">{ingredient.name}</span>
       {/*
-       * 「買い物中に数量だけを縦に追えるようにするため」（引き継ぎ資料）。
-       * **左右を入れ替えない。**
-       *
-       * tabular-nums で桁を揃える。幅 5.5em は固定で、長い分量は
-       * 折り返して材料名の1行目に揃う。分量が無い行でも幅は保つ（左端が揃う）。
+       * 分量: 幅 5.5em 固定・右寄せ・tabular-nums で桁を揃える。
+       * 分量が無い行でも幅は保つ（右端が揃う）。
        */}
       <span className="text-ink w-[5.5em] flex-none text-right text-lead font-bold tabular-nums">
         {ingredient.amount}
       </span>
-      <span className="text-ink flex-1 text-lead leading-[1.6] text-pretty">{ingredient.name}</span>
     </li>
   );
 }
@@ -101,8 +109,15 @@ export function IngredientList({ ingredients, servings }: Props) {
   const visible = filter === ALL ? ingredients : ingredients.filter((i) => i.category === filter);
 
   return (
-    // id は段階7 のページ内移動（`材料 ↓`）の着地点になる
-    <section id="ingredients" aria-labelledby="ingredients-heading">
+    /*
+     * ヘッダーの `材料 ↓` の着地点。
+     *
+     * **`scroll-mt-28`（112px）が要る。** 固定ヘッダーは sticky で本文の上に重なるので、
+     * これが無いと**飛んだ先の見出しがヘッダーの下に潜る**（エラーは出ない。落とし穴 #9）。
+     * 値はヘッダー実測高さ（仕様値からの算出で約106px）に少し余裕を持たせたもの。
+     * **足りないと隠れるが、多すぎても見出しの上が少し空くだけ**なので大きめに倒してある。
+     */
+    <section id="ingredients" aria-labelledby="ingredients-heading" className="scroll-mt-28">
       <h2 id="ingredients-heading" className="text-ink text-title font-bold">
         {headingText(servings)}
       </h2>

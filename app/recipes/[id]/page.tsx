@@ -4,6 +4,7 @@ import { getUserId } from "@/lib/auth/session";
 import { findRecipeForUser } from "@/lib/repositories/recipe";
 
 import { IngredientList } from "./ingredient-list";
+import { RecipeHeader } from "./recipe-header";
 import { StepList } from "./step-list";
 
 /**
@@ -39,13 +40,18 @@ export default async function RecipePage(props: PageProps<"/recipes/[id]">) {
   }
 
   return (
-    // レスポンシブ: この画面は単一カラムのまま max-width 640px で中央寄せ
-    // （引き継ぎ資料 Responsive。1列/3列に切り替わるのは一覧だけ）
-    <main className="mx-auto flex w-full max-w-[640px] flex-col gap-4 px-4 py-5">
-      <h1 className="text-ink text-title font-bold">{recipe.title}</h1>
+    <>
+      {/* タイトルはヘッダーの中段に入る（design.md 6.1）。本文側には置かない */}
+      <RecipeHeader title={recipe.title} />
 
-      <IngredientList ingredients={recipe.ingredients} servings={recipe.servings} />
-      <StepList steps={recipe.steps} />
-    </main>
+      {/*
+       * レスポンシブ: この画面は単一カラムのまま max-width 640px で中央寄せ
+       * （引き継ぎ資料 Responsive。1列/3列に切り替わるのは一覧だけ。design.md 食い違い5）
+       */}
+      <main className="mx-auto flex w-full max-w-[640px] flex-col gap-4 px-4 py-5">
+        <IngredientList ingredients={recipe.ingredients} servings={recipe.servings} />
+        <StepList steps={recipe.steps} />
+      </main>
+    </>
   );
 }

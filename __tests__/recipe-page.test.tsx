@@ -139,3 +139,40 @@ describe("not-found 画面", () => {
     expect(text).not.toMatch(/権限|他のユーザー|他人/);
   });
 });
+
+/**
+ * 固定ヘッダー（段階7）。
+ *
+ * **jsdom では「実際に固定されるか」を担保できない**（design.md 8章）。
+ * ここで固定できるのは構造まで。位置と重なりは実機で見る（段階13）。
+ */
+describe("固定ヘッダー", () => {
+  it("タイトルはヘッダーの見出しとして1つだけ出る（本文に重複させない）", async () => {
+    render(await RecipePage(props()));
+
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("肉じゃが");
+  });
+
+  it("ページ内の移動リンクがヘッダーに出る", async () => {
+    render(await RecipePage(props()));
+
+    expect(screen.getByRole("link", { name: "材料 ↓" }).getAttribute("href")).toBe("#ingredients");
+    expect(screen.getByRole("link", { name: "作り方 ↓" }).getAttribute("href")).toBe("#steps");
+  });
+
+  it("移動リンクの飛び先が実際に存在する（リンク切れにしない）", async () => {
+    const { container } = render(await RecipePage(props()));
+
+    expect(container.querySelector("#ingredients")).not.toBeNull();
+    expect(container.querySelector("#steps")).not.toBeNull();
+  });
+
+  it("飛び先に scroll-margin を入れる（ヘッダーの下に潜らせない。落とし穴 #9）", async () => {
+    const { container } = render(await RecipePage(props()));
+
+    // 実際に隠れないかは実機でしか分からない。ここでは「入れ忘れ」だけを止める
+    expect(container.querySelector("#ingredients")?.className).toMatch(/scroll-mt-/);
+    expect(container.querySelector("#steps")?.className).toMatch(/scroll-mt-/);
+  });
+});

@@ -353,3 +353,60 @@ describe("材料が1件も無いレシピでは絞り込みを出さない", () 
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 });
+
+/**
+ * 行の左右（design.md 6.5）。
+ *
+ * **引き継ぎ資料は「分量が左」だったが、2026-08-24 にユーザーが実機で見て逆に決めた。**
+ * 資料側の記述だけを見て元に戻されないよう、ここで固定する。
+ */
+describe("材料行の左右", () => {
+  it("材料名が左、分量が右の順で並ぶ", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const row = screen.getByText("じゃがいも").closest("li");
+    const cells = Array.from(row?.children ?? []).map((el) => el.textContent);
+
+    expect(cells).toEqual(["じゃがいも", "3個"]);
+  });
+
+  it("分量は右寄せのまま（右端で桁が揃う）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const row = screen.getByText("じゃがいも").closest("li");
+    const amount = row?.children[1];
+
+    expect(amount?.className).toMatch(/\btext-right\b/);
+  });
+
+  it("材料名は左寄せ（右寄せのクラスを当てない）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const row = screen.getByText("じゃがいも").closest("li");
+    const name = row?.children[0];
+
+    expect(name?.className).not.toMatch(/\btext-right\b/);
+  });
+
+  it("分量が無い行でも、材料名が左に来る", () => {
+    render(
+      <IngredientList
+        ingredients={[
+          {
+            id: "x",
+            recipeId: RECIPE_ID,
+            name: "塩",
+            amount: null,
+            category: Category.SEASONING,
+            order: 0,
+          },
+        ]}
+        servings={null}
+      />,
+    );
+
+    const row = screen.getByText("塩").closest("li");
+
+    expect(row?.children[0].textContent).toBe("塩");
+  });
+});
