@@ -16,8 +16,12 @@ type Props = {
 
 export function StepList({ steps }: Props) {
   return (
-    // ヘッダーの `作り方 ↓` の着地点。scroll-mt-28 の理由は ingredient-list.tsx を参照
-    <section id="steps" aria-labelledby="steps-heading" className="scroll-mt-28">
+    // ヘッダーの `作り方 ↓` の着地点。scroll-margin-top の理由は ingredient-list.tsx を参照
+    <section
+      id="steps"
+      aria-labelledby="steps-heading"
+      className="scroll-mt-[var(--recipe-header-h)]"
+    >
       <h2 id="steps-heading" className="text-ink text-title font-bold">
         作り方
       </h2>

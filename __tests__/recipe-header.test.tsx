@@ -90,3 +90,61 @@ describe("長いタイトル", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(long);
   });
 });
+
+/**
+ * 現在位置の反映（段階8 / requirements.md Req3）。
+ *
+ * **⚠️ jsdom はレイアウトを持たない。** `offsetHeight` も `getBoundingClientRect()` も
+ * 0 を返すので、**「スクロールしたら作り方に切り替わる」ことは自動テストでは踏めない**
+ * （design.md 8章）。ここで固定できるのは初期状態と、示し方が「面なし」であること。
+ * 切り替わり自体は実機で見る（段階13）。
+ */
+describe("現在位置", () => {
+  it("開いた直後は「材料」が現在位置になる", () => {
+    render(<RecipeHeader title="肉じゃが" />);
+
+    expect(screen.getByRole("link", { name: "材料 ↓" }).getAttribute("aria-current")).toBe(
+      "location",
+    );
+  });
+
+  it("開いた直後は「作り方」が現在位置ではない", () => {
+    render(<RecipeHeader title="肉じゃが" />);
+
+    expect(screen.getByRole("link", { name: "作り方 ↓" }).getAttribute("aria-current")).toBeNull();
+  });
+
+  it("現在位置は常に1つだけ", () => {
+    render(<RecipeHeader title="肉じゃが" />);
+
+    const current = screen
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("aria-current") !== null);
+
+    expect(current).toHaveLength(1);
+  });
+
+  it("現在位置を面ではなく太さと文字色で示す（絞り込みと混ぜない。落とし穴 #14）", () => {
+    render(<RecipeHeader title="肉じゃが" />);
+
+    const active = screen.getByRole("link", { name: "材料 ↓" });
+
+    expect(active.className).toMatch(/\bfont-bold\b/);
+    // 面を持つと絞り込みのピルと同じ見た目になる
+    expect(active.className).not.toMatch(/\bbg-/);
+  });
+
+  it("ヘッダーの高さを CSS 変数に流す（飛び先の scroll-margin が参照する）", () => {
+    render(<RecipeHeader title="肉じゃが" />);
+
+    // jsdom では 0px になる。ここで見たいのは「設定しているか」だけ
+    expect(document.documentElement.style.getPropertyValue("--recipe-header-h")).not.toBe("");
+  });
+
+  it("画面を離れたら CSS 変数を戻す（他の画面に持ち越さない）", () => {
+    const { unmount } = render(<RecipeHeader title="肉じゃが" />);
+    unmount();
+
+    expect(document.documentElement.style.getPropertyValue("--recipe-header-h")).toBe("");
+  });
+});

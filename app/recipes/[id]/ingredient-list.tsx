@@ -112,12 +112,18 @@ export function IngredientList({ ingredients, servings }: Props) {
     /*
      * ヘッダーの `材料 ↓` の着地点。
      *
-     * **`scroll-mt-28`（112px）が要る。** 固定ヘッダーは sticky で本文の上に重なるので、
+     * **`scroll-margin-top` が要る。** 固定ヘッダーは sticky で本文の上に重なるので、
      * これが無いと**飛んだ先の見出しがヘッダーの下に潜る**（エラーは出ない。落とし穴 #9）。
-     * 値はヘッダー実測高さ（仕様値からの算出で約106px）に少し余裕を持たせたもの。
-     * **足りないと隠れるが、多すぎても見出しの上が少し空くだけ**なので大きめに倒してある。
+     *
+     * 値は `--recipe-header-h`。`globals.css` の 112px がフォールバックで、
+     * **実際の高さは `recipe-header.tsx` が測って上書きする**ので、
+     * タイトルが2行になっても追従する（design.md 6.4）。
      */
-    <section id="ingredients" aria-labelledby="ingredients-heading" className="scroll-mt-28">
+    <section
+      id="ingredients"
+      aria-labelledby="ingredients-heading"
+      className="scroll-mt-[var(--recipe-header-h)]"
+    >
       <h2 id="ingredients-heading" className="text-ink text-title font-bold">
         {headingText(servings)}
       </h2>
