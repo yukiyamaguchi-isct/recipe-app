@@ -1,24 +1,26 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { RecipeHeader } from "@/app/recipes/[id]/recipe-header";
 
+const RECIPE_ID = "clr1a2b3c4d5e6f7g8h9";
+
 describe("RecipeHeader", () => {
   it("レシピのタイトルを見出しとして出す", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("肉じゃが");
   });
 
   it("材料と作り方への移動リンクを出す", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.getByRole("link", { name: "材料 ↓" }).getAttribute("href")).toBe("#ingredients");
     expect(screen.getByRole("link", { name: "作り方 ↓" }).getAttribute("href")).toBe("#steps");
   });
 
   it("移動リンクをまとめて nav に入れる（読み上げに用途が伝わる）", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.getByRole("navigation", { name: "ページ内の移動" })).toBeDefined();
   });
@@ -32,20 +34,20 @@ describe("RecipeHeader", () => {
  */
 describe("Phase 3 では上段を描かない", () => {
   it("「← 一覧」を出さない", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.queryByRole("link", { name: /一覧/ })).toBeNull();
   });
 
   it("「編集」を出さない", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.queryByRole("button", { name: /編集/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /編集/ })).toBeNull();
   });
 
   it("移動リンク以外のリンクを置かない", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.getAllByRole("link")).toHaveLength(2);
   });
@@ -58,21 +60,26 @@ describe("Phase 3 では上段を描かない", () => {
  * （design.md 8章）。ここで固定できるのは「移動として組んであるか」まで。
  */
 describe("移動として組む（絞り込みと混ぜない）", () => {
-  it("ボタンではなくリンクにする（押しても状態が残らない操作）", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+  it("移動はボタンではなくリンクにする（押しても状態が残らない操作）", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // ⚠️ ヘッダー全体では `✎ 改題`（操作）がボタンとして居る。
+    // ここで見たいのは**移動が nav 内のリンクであること**なので、nav に絞る
+    const nav = screen.getByRole("navigation", { name: "ページ内の移動" });
+
+    expect(within(nav).queryAllByRole("button")).toHaveLength(0);
+    expect(within(nav).getAllByRole("link")).toHaveLength(2);
   });
 
   it("方向記号を付ける", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.getByRole("link", { name: "材料 ↓" }).textContent).toContain("↓");
     expect(screen.getByRole("link", { name: "作り方 ↓" }).textContent).toContain("↓");
   });
 
   it("面（背景色）を持つクラスを当てない", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     // 絞り込みピルは bg-primary / bg-surface を持つ。移動リンクは面なし
     for (const link of screen.getAllByRole("link")) {
@@ -85,7 +92,7 @@ describe("長いタイトル", () => {
   it("折り返しても落ちない（切り詰めない）", () => {
     const long = "鶏肉と根菜のこっくり煮込み〜柚子胡椒を添えて〜たっぷり野菜と一緒に";
 
-    render(<RecipeHeader title={long} />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title={long} />);
 
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(long);
   });
@@ -101,7 +108,7 @@ describe("長いタイトル", () => {
  */
 describe("現在位置", () => {
   it("開いた直後は「材料」が現在位置になる", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.getByRole("link", { name: "材料 ↓" }).getAttribute("aria-current")).toBe(
       "location",
@@ -109,13 +116,13 @@ describe("現在位置", () => {
   });
 
   it("開いた直後は「作り方」が現在位置ではない", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     expect(screen.getByRole("link", { name: "作り方 ↓" }).getAttribute("aria-current")).toBeNull();
   });
 
   it("現在位置は常に1つだけ", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     const current = screen
       .getAllByRole("link")
@@ -125,7 +132,7 @@ describe("現在位置", () => {
   });
 
   it("現在位置を面ではなく太さと文字色で示す（絞り込みと混ぜない。落とし穴 #14）", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     const active = screen.getByRole("link", { name: "材料 ↓" });
 
@@ -135,14 +142,14 @@ describe("現在位置", () => {
   });
 
   it("ヘッダーの高さを CSS 変数に流す（飛び先の scroll-margin が参照する）", () => {
-    render(<RecipeHeader title="肉じゃが" />);
+    render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
 
     // jsdom では 0px になる。ここで見たいのは「設定しているか」だけ
     expect(document.documentElement.style.getPropertyValue("--recipe-header-h")).not.toBe("");
   });
 
   it("画面を離れたら CSS 変数を戻す（他の画面に持ち越さない）", () => {
-    const { unmount } = render(<RecipeHeader title="肉じゃが" />);
+    const { unmount } = render(<RecipeHeader recipeId={RECIPE_ID} title="肉じゃが" />);
     unmount();
 
     expect(document.documentElement.style.getPropertyValue("--recipe-header-h")).toBe("");

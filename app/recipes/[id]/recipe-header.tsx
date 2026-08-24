@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { RecipeTitle } from "./recipe-title";
+
 /**
  * S-04 の固定ヘッダー（`UI_DESIGN.md` S-04 / design.md 6.1）。
  *
@@ -23,6 +25,8 @@ const LINKS: readonly { id: Section; label: string }[] = [
 const HEADER_HEIGHT_VAR = "--recipe-header-h";
 
 type Props = {
+  recipeId: string;
+  /** 初期のタイトル。**改名するとここではなく `title` の state が正になる** */
   title: string;
 };
 
@@ -33,9 +37,14 @@ type Props = {
  * `fixed` にすると本文の先頭がヘッダーに隠れ、その分の `padding-top` を手で足すことになり、
  * ヘッダーの高さが変わるたびにズレる。
  */
-export function RecipeHeader({ title }: Props) {
+export function RecipeHeader({ recipeId, title: initialTitle }: Props) {
   const headerRef = useRef<HTMLElement>(null);
   const [current, setCurrent] = useState<Section>("ingredients");
+
+  // **確定済みのタイトルはここが持つ。** 改名でヘッダーの高さが変わりうるので、
+  // 下の useEffect の依存に入れて測り直させる（design.md 6.4）。
+  // 編集中の下書きは RecipeTitle 側に閉じている。
+  const [title, setTitle] = useState(initialTitle);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -103,13 +112,11 @@ export function RecipeHeader({ title }: Props) {
     >
       <div className="mx-auto w-full max-w-[640px]">
         {/*
-         * 中段: タイトル 22px/700/lh1.4。仕様の padding は 0 16px 8px だが、
+         * 中段: タイトル 22px/700/lh1.4 ＋ `✎ 改題`。仕様の padding は 0 16px 8px だが、
          * **上段が無いぶんの上余白（12px）をここで持つ。** 無いと画面の縁に文字が貼り付く。
-         * これは仕様値ではなくこちらの判断（design.md 6.4）。
+         * これは仕様値ではなくこちらの判断（design.md 6.4）。余白は RecipeTitle 側にある。
          */}
-        <div className="px-4 pt-3 pb-2">
-          <h1 className="text-ink text-title leading-[1.4] font-bold">{title}</h1>
-        </div>
+        <RecipeTitle recipeId={recipeId} title={title} onRenamed={setTitle} />
 
         {/*
          * 下段: ページ内の移動。**「移動」は面なし・枠なし・文字色 --color-link ＋ 方向記号**

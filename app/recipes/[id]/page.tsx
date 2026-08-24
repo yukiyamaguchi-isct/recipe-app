@@ -42,7 +42,7 @@ export default async function RecipePage(props: PageProps<"/recipes/[id]">) {
   return (
     <>
       {/* タイトルはヘッダーの中段に入る（design.md 6.1）。本文側には置かない */}
-      <RecipeHeader title={recipe.title} />
+      <RecipeHeader recipeId={recipe.id} title={recipe.title} />
 
       {/*
        * レスポンシブ: この画面は単一カラムのまま max-width 640px で中央寄せ
