@@ -121,3 +121,36 @@ export class StorageFailedError extends AppError {
     );
   }
 }
+
+// ---- Phase 3: recipe-view ----
+
+/**
+ * 入力が要件を満たしていない。HTTP 400。
+ *
+ * **⚠️ このクラスだけ `message` を引数で受け取る。** Phase 2 のエラー
+ * （`StorageFailedError` など）は、外部APIの生メッセージを差し込めないように
+ * わざと引数を持たせていない（design.md 5.5）。
+ *
+ * **ここで渡してよいのは、こちらが定義した固定文言だけ**
+ * （`lib/recipes/title.ts` の `EMPTY_TITLE_MESSAGE` など）。
+ * **外部入力やライブラリの例外メッセージを渡さないこと。** 渡すと画面に漏れる。
+ * 検証の理由は複数あり（空 / 長すぎる）、それぞれ違う直し方を案内する必要がある。
+ */
+export class ValidationError extends AppError {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super("VALIDATION_ERROR", message, options);
+  }
+}
+
+/**
+ * レシピが見つからない。HTTP 404。
+ *
+ * **「存在しない」と「他人のもの」の両方がここに来る。区別しない**（design.md 5.2）。
+ * 出し分けると、IDを総当たりして他人のレシピの存在を確かめられる。
+ * **文言でもどちらなのかを匂わせない。**
+ */
+export class RecipeNotFoundError extends AppError {
+  constructor(options?: { cause?: unknown }) {
+    super("RECIPE_NOT_FOUND", "レシピが見つかりませんでした。", options);
+  }
+}

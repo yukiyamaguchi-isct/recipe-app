@@ -88,3 +88,35 @@ export async function findRecipeForUser(
     },
   });
 }
+
+/**
+ * タイトルを変更する。**他人のレシピは更新されない。**
+ *
+ * 更新できた件数を返す。**0 なら「存在しない」か「他人のもの」**（呼び出し側は区別しない）。
+ *
+ * **`update` ではなく `updateMany` を使う。**
+ *
+ * Prisma 7 の `update` は `where` に非一意フィールドも受ける
+ * （`RecipeWhereUniqueInput` が `AtLeast<{...}, "id">` なので `userId` を足せる）ので、
+ * `update({ where: { id, userId } })` でも所有チェックは効く。**それでも updateMany を選んだ**:
+ *
+ * - `update` は一致しないと例外（`P2025`）を投げる。**「見つからない」の判定が
+ *   Prisma のエラーコードという実行時の詳細に依存する**
+ * - `updateMany` は件数を返すだけ。**テストしやすく、コードが変わっても壊れにくい**
+ *
+ * **見分け方**: 他人の userId で呼んで戻り値が 0 になること。1 が返ったらスコープが外れている。
+ */
+export async function updateRecipeTitle(
+  userId: string,
+  recipeId: string,
+  title: string,
+): Promise<number> {
+  const result = await prisma.recipe.updateMany({
+    // ⚠️ userId を where に入れるのが唯一の所有チェック（design.md 落とし穴 #19）。
+    // 落としても自分のレシピしか作らないテストは全部通ってしまう。
+    where: { id: recipeId, userId },
+    data: { title },
+  });
+
+  return result.count;
+}

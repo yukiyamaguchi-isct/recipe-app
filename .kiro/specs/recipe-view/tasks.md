@@ -271,21 +271,30 @@ Phase 2 は `lib/` の部品を先に揃えて上に積んだ。Phase 3 は取�
 
 **Req7 の前半（サーバー側）。** ✅ 2026-08-24 のユーザー決定で Phase 3 に入った。
 
-- [ ] `updateRecipeTitle(userId, recipeId, title)` を `lib/repositories/recipe.ts` に追加する（design.md 5.6）
-- [ ] **`updateMany` を使い、`where` に `userId` を入れる。** `update({ where: { id } })` にしない（落とし穴 #19）
-- [ ] `generated/prisma` の型定義で `update` の `where` の仕様を確認し、design.md 5.6 の `⚠️` を潰す（**対応していても方針は変えない**）
-- [ ] `lib/errors.ts` に `ValidationError` / `RecipeNotFoundError` を追加する（Phase 2 と同じく `message` を引数で受け取らない形）
-- [ ] **`lib/api-response.ts` の `STATUS` 表にも2つ足す**（落とし穴 #20）。`VALIDATION_ERROR: 400` / `RECIPE_NOT_FOUND: 404`
-- [ ] `app/api/recipes/[id]/route.ts` に `PATCH` を追加する。**`context.params` を `await` する**（落とし穴 #22）
-- [ ] タイトルを `trim()` し、空を拒否、上限を設ける（design.md 5.6。**上限は実データを見て決め直してよい**）
-- [ ] **テストファイルの先頭に `// @vitest-environment node` を書く**（落とし穴 #21）
-- [ ] テスト: 未ログインで 401／空タイトルで 400／他人のIDで 404／成功で 200／**他人の `userId` で更新件数が 0**
+- [x] `updateRecipeTitle(userId, recipeId, title)` を `lib/repositories/recipe.ts` に追加する（design.md 5.6）
+- [x] **`updateMany` を使い、`where` に `userId` を入れる。** `update({ where: { id } })` にしない（落とし穴 #19）
+- [x] `generated/prisma` の型定義で `update` の `where` の仕様を確認し、design.md 5.6 の `⚠️` を潰す（**対応していても方針は変えない**）
+- [x] `lib/errors.ts` に `ValidationError` / `RecipeNotFoundError` を追加する
+- [x] **`lib/api-response.ts` の `STATUS` 表にも2つ足す**（落とし穴 #20）。`VALIDATION_ERROR: 400` / `RECIPE_NOT_FOUND: 404`
+- [x] `app/api/recipes/[id]/route.ts` に `PATCH` を追加する。**`context.params` を `await` する**（落とし穴 #22）
+- [x] タイトルを `trim()` し、空を拒否、上限を設ける（**上限は実データを見て決め直してよい**）
+- [x] **テストファイルの先頭に `// @vitest-environment node` を書く**（落とし穴 #21）
+- [x] テスト: 未ログインで 401／空タイトルで 400／他人のIDで 404／成功で 200／**他人の `userId` で更新件数が 0**
+- [x] **テストが欠落を実際に捕まえることを確認する**（`where` から `userId` を抜く／`STATUS` 表から落とす）
 
 **受け入れ基準**: `format` / `lint` / `tsc` / `test` / `build` がすべて終了コード0
 
 > **⚠️ `proxy.ts` の matcher が `api` を除外していることに依存している**（`.kiro/specs/recipe-analysis/design.md` 5.4）。**matcher に `api` を含めると 401 ではなく 307 が返るが、ユニットテストは通る。**
 
----
+### 実施時の記録
+
+- **⚠️ 危うく防波堤の無い状態で終えるところだった。** `updateRecipeTitle` の `where` から `userId` を抜いても、**既存テストは30件すべて通った**。Route Handler のテストは Repository をモックするので気づけない。**落とし穴 #19 が警告していたとおり**だったので、`__tests__/recipe-update.test.ts` を追加し、抜くと2件落ちることを確認した
+  - **教訓**: 「所有チェックのテストを書く」はチェックリストにあったが、**Route Handler 側のテストで満たしたつもりになっていた**。**モックの境界より内側は、その層のテストでしか守れない**
+- **Prisma 7 の `update` も非一意フィールドを受ける**ことが分かった（`RecipeWhereUniqueInput` は `AtLeast<{...}, "id">`。`generated/prisma/models/Recipe.ts` L253-265）。`update({ where: { id, userId } })` でも所有チェックは効く。**それでも `updateMany` を採った**のは、`update` が一致しないと `P2025` を投げるため「見つからない」の判定が**Prisma のエラーコードに依存する**から。件数で判定するほうがテストしやすい
+- **`lib/recipes/title.ts` を新設し、検証をサーバーとクライアントで共有できるようにした。** 段階10 のインライン改名も同じものを呼ぶ。**文言を二重に書かない**（recipe-analysis 落とし穴 #27）。**サーバー専用の依存を持たせない**（クライアントから import するため）
+- **`ValidationError` だけ `message` を引数で受け取る形にした。** Phase 2 のエラーは外部の生メッセージを差し込めないよう引数を持たせていないが、**検証は理由ごとに違う直し方を案内する必要がある**ため。代わりに「渡してよいのは自前の定数だけ」を型ではなくコメントとテストで縛った
+- **⚠️ 自分のテストの前提が間違っていた。** 「絵文字を1文字として数える」テストで `"👩‍🍳"` を使ったが、これは **👩 + ZWJ + 🍳 の3コードポイント**。実装が悪いのではなく**テストの想定が誤り**だった。サロゲートペア（`"🍳"`）で数え方を検証し、**ZWJ 結合は多く数える割り切り**を別テストで明示した
+- **上限100文字は根拠のある数値ではない。** DB は無制限で、ヘッダーで2行に収まる目安として置いた。**段階13 で実データのタイトル長を見て決め直す**
 
 ## 段階10: ヘッダーのタイトルをその場で改名できるようにする
 
