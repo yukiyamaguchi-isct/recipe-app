@@ -399,6 +399,51 @@ export async function PATCH(request: Request, context: RouteContext<"/api/recipe
 
 **404 で「存在しない」と「他人のもの」を区別しない**（5.2 と同じ理由）。`__tests__/api-response.test.ts` が「`lib/errors.ts` の全エラーが対応表に載っている」ことを固定しているので、**足し忘れるとそのテストが落ちる。**
 
+## 5.7 クライアントコンポーネントの境目（✅ 実測 2026-08-24、段階6）
+
+絞り込みの状態を持つため `ingredient-list.tsx` を `"use client"` にした。**このフェーズで最初のクライアントコンポーネント。**
+
+### ⚠️ `@/generated/prisma/client` から**値**を import するとビルドが落ちる
+
+**実際に踏んだ。** `Category`（enum の値）をクライアントコンポーネントで使ったところ、`npm run build` が次で失敗した。
+
+```
+the chunking context (unknown) does not support external modules (request: node:module)
+  at ... Failed to write app endpoint /recipes/[id]/page
+```
+
+**原因**: `generated/prisma/client.ts` は先頭で `node:process` / `node:path` / `node:url` と `@prisma/client/runtime/client` を import している（L13-21）。**そこから値を1つ取るだけで、Prisma のランタイムごとブラウザ向けバンドルに入る。**
+
+**対処**: 値は `@/generated/prisma/enums` から取る。
+
+```ts
+// ✅ enums.ts は import を1つも持たない定数だけのファイル。
+// Prisma 自身が「🟢 You can import this file directly」と書いている
+import { Category } from "@/generated/prisma/enums";
+// 型は import type なのでコンパイル時に消える。client から取ってよい
+import type { Ingredient } from "@/generated/prisma/client";
+```
+
+- **`.kiro/specs/recipe-analysis/design.md` 5.3 と同じ構図。** あちらは「`normalize.ts` に定数を置いたままクライアントから import すると sharp がブラウザ向けバンドルに混入する」で、`lib/images/constants.ts` に切り出して解決した。**サーバー専用の重い依存を持つファイルから、値を1つだけ借りない**
+- **見分け方**: `npm run build` が `does not support external modules` で落ちたら、クライアント側から import している値の出どころを疑う。**型チェックもテストも通る**ので、ビルドまで分からない
+- **✅ 確認**: 修正後、クライアントの JS チャンクに `node:process` の参照が無いことを確認した
+
+### Server → Client に渡すもの
+
+渡しているのは `Ingredient[]`（`string` / `number` / `null` だけ）と `servings`。**`Date` は渡していない**（落とし穴 #15）。`createdAt` / `updatedAt` はこの画面で使わないので、そもそも props に含めない。
+
+### 絞り込みを ARIA の tablist にしない
+
+`role="tablist"` / `role="tab"` は**矢印キーでの移動が要求される**が、ここでは実装していない。**実装していない操作を約束しない**ため、`<button>` ＋ `aria-pressed` にした。`role="group"` に `aria-label="材料の絞り込み"` を付けて、まとまりだけ伝える。
+
+### `#23505C` を `--color-ink-control` として `@theme` に追加した
+
+**引き継ぎ資料の `@theme` ブロックには無いが、コンポーネント仕様に3箇所出てくる色**（非選択の絞り込みピルの文字 / フォームのラベル / 確認ダイアログの本文）。デザインHTMLでも35箇所で使われている。**推測した値ではない。**
+
+Phase 2 の `--color-muted` / `--color-track` と同じ扱い（`.kiro/specs/recipe-analysis/design.md` 6.2.8）。**名前はこちらで付けた**（資料側に変数名が無いため）。既存の `--color-ink`（#0B2D39）より軽く、`--color-ink-sub`（#4A6570）より重い位置にある。
+
+**近い既存トークンで代用しない。** 資料に書かれている色を勝手に別の色へ寄せることになる。
+
 ---
 
 # 6. 画面
@@ -576,34 +621,36 @@ export async function PATCH(request: Request, context: RouteContext<"/api/recipe
 
 **着手前に書いているので、実装中に増える。**
 
-| #   | 落とし穴                                               | 症状                                                                                | 対処                  |
-| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------- | --------------------- |
-| 1   | `params` を `await` せずに使う                         | **型は通り、実行時に `undefined`。** 「見つかりません」が出るだけでエラーにならない | 1.2                   |
-| 2   | `findUnique` で取ってから `userId` を確認する          | 確認を忘れても動く。**他人のレシピが読める**                                        | 5.1                   |
-| 3   | `include` に `orderBy` を書かない                      | 並び順が DB 依存。**手元では偶然正しく見える**                                      | 1.4                   |
-| 4   | 「存在しない」と「他人のもの」を出し分ける             | IDの総当たりで他人のレシピの存在が分かる                                            | 5.2                   |
-| 5   | `requireUserId()` を Server Component で使う           | **`/login` へのリダイレクトではなくエラー画面になる**                               | 5.2                   |
-| 6   | `Object.values(Category)` をタブの並びに使う           | スキーマの enum 順を変えると画面のタブ順が変わる。**型では捕まらない**              | 5.4                   |
-| 7   | `servings` が `null` のとき数字を補う                  | 読み取れなかったことを隠す。**丸めない**                                            | 5.5                   |
-| 8   | 分量と材料名の左右を入れ替える                         | 買い物中に数量を縦に追えなくなる。**意図的に分量が左**                              | 6.1                   |
-| 9   | `scroll-margin-top` を入れない                         | **アンカー移動の着地点が固定ヘッダーの下に潜る。エラーは出ない**                    | 6.4                   |
-| 10  | 資料の「`scrollIntoView` を使わない」をそのまま写す    | あれはモックが枠内スクロールだったため。**実アプリのスクロールコンテナは別**        | 6.4                   |
-| 11  | 最下部固定バーの分の余白を入れない                     | 最後の手順がバーに隠れる                                                            | 6.3                   |
-| 12  | S-04 と S-04c を別コンポーネントにする                 | 片方だけ直して表示がずれる。**差は3点だけ**                                         | 6.3                   |
-| 13  | `--color-accent` の上に文字を置く                      | 白文字 2.1:1 / 濃色 4.2:1 でどちらもコントラスト不足                                | 6.1                   |
-| 14  | ヘッダーやタブに4種類目の見た目を足す                  | 「移動 / 操作 / 絞り込み」の描き分けが壊れる。**このデザインの中核ルール**          | 6.2                   |
-| 15  | `Date` を Client Component に渡す                      | 実行時に「Only plain objects can be passed」。**ビルドでは捕まらない**              | 5.3                   |
-| 16  | 旧版の緑基調 `Recipe Design System.dc.html` を参照する | 履歴として同梱されているだけ。**正は v2**                                           | 確定事項              |
-| 19  | タイトル更新に `update({ where: { id } })` を使う      | 所有チェックが `where` の外に出る。**忘れても動き、他人のレシピを改名できる**       | 5.6                   |
-| 20  | 新しいエラーを `lib/errors.ts` にだけ足す              | `STATUS` 表に無いコードは 500 にフォールバックする。**型では捕まらない**            | 5.6 / 7.2             |
-| 21  | `PATCH` のテストを jsdom で走らせる                    | Request / Response が壊れ、**実装が悪いように見える**                               | 8章                   |
-| 22  | Route Handler の `params` を `await` しない            | `page.js` と同じく Route Handler の `params` も Promise                             | 1.2 / 5.6             |
-| 23  | ヘッダー上段を「空の段」として高さだけ残す             | Phase 3 では中身が両方とも無い。**段ごと描かない**                                  | 6.1                   |
-| 24  | `not-found.tsx` を行き止まりにする                     | `← 一覧` が Phase 3 に無いため、戻る手段が消える                                    | 7.1                   |
-| 25  | ページを作った直後に `tsc` を回す                      | **`PageProps<"/新ルート">` は typegen 前だと解決しない。** コードが正しくても落ちる | 1.2                   |
-| 26  | ルート表に `not-found` が出ないので効いていないと思う  | `not-found.tsx` はルートではない。**SSR チャンクに入る**                            | 1.3                   |
-| 17  | Tailwind のトークン名を打ち間違える                    | **ビルドは通り、そのCSSだけ静かに空になる。** 成果物のCSSで確認する                 | recipe-analysis 6.2.6 |
-| 18  | `--size-tap` から `h-tap` が生えると思う               | Tailwind v4 に `--size-*` の名前空間は無い。`h-[var(--size-tap)]` と書く            | recipe-analysis 6.2.6 |
+| #   | 落とし穴                                                                          | 症状                                                                                                                        | 対処                  |
+| --- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| 1   | `params` を `await` せずに使う                                                    | **型は通り、実行時に `undefined`。** 「見つかりません」が出るだけでエラーにならない                                         | 1.2                   |
+| 2   | `findUnique` で取ってから `userId` を確認する                                     | 確認を忘れても動く。**他人のレシピが読める**                                                                                | 5.1                   |
+| 3   | `include` に `orderBy` を書かない                                                 | 並び順が DB 依存。**手元では偶然正しく見える**                                                                              | 1.4                   |
+| 4   | 「存在しない」と「他人のもの」を出し分ける                                        | IDの総当たりで他人のレシピの存在が分かる                                                                                    | 5.2                   |
+| 5   | `requireUserId()` を Server Component で使う                                      | **`/login` へのリダイレクトではなくエラー画面になる**                                                                       | 5.2                   |
+| 6   | `Object.values(Category)` をタブの並びに使う                                      | スキーマの enum 順を変えると画面のタブ順が変わる。**型では捕まらない**                                                      | 5.4                   |
+| 7   | `servings` が `null` のとき数字を補う                                             | 読み取れなかったことを隠す。**丸めない**                                                                                    | 5.5                   |
+| 8   | 分量と材料名の左右を入れ替える                                                    | 買い物中に数量を縦に追えなくなる。**意図的に分量が左**                                                                      | 6.1                   |
+| 9   | `scroll-margin-top` を入れない                                                    | **アンカー移動の着地点が固定ヘッダーの下に潜る。エラーは出ない**                                                            | 6.4                   |
+| 10  | 資料の「`scrollIntoView` を使わない」をそのまま写す                               | あれはモックが枠内スクロールだったため。**実アプリのスクロールコンテナは別**                                                | 6.4                   |
+| 11  | 最下部固定バーの分の余白を入れない                                                | 最後の手順がバーに隠れる                                                                                                    | 6.3                   |
+| 12  | S-04 と S-04c を別コンポーネントにする                                            | 片方だけ直して表示がずれる。**差は3点だけ**                                                                                 | 6.3                   |
+| 13  | `--color-accent` の上に文字を置く                                                 | 白文字 2.1:1 / 濃色 4.2:1 でどちらもコントラスト不足                                                                        | 6.1                   |
+| 14  | ヘッダーやタブに4種類目の見た目を足す                                             | 「移動 / 操作 / 絞り込み」の描き分けが壊れる。**このデザインの中核ルール**                                                  | 6.2                   |
+| 15  | `Date` を Client Component に渡す                                                 | 実行時に「Only plain objects can be passed」。**ビルドでは捕まらない**                                                      | 5.3                   |
+| 16  | 旧版の緑基調 `Recipe Design System.dc.html` を参照する                            | 履歴として同梱されているだけ。**正は v2**                                                                                   | 確定事項              |
+| 19  | タイトル更新に `update({ where: { id } })` を使う                                 | 所有チェックが `where` の外に出る。**忘れても動き、他人のレシピを改名できる**                                               | 5.6                   |
+| 20  | 新しいエラーを `lib/errors.ts` にだけ足す                                         | `STATUS` 表に無いコードは 500 にフォールバックする。**型では捕まらない**                                                    | 5.6 / 7.2             |
+| 21  | `PATCH` のテストを jsdom で走らせる                                               | Request / Response が壊れ、**実装が悪いように見える**                                                                       | 8章                   |
+| 22  | Route Handler の `params` を `await` しない                                       | `page.js` と同じく Route Handler の `params` も Promise                                                                     | 1.2 / 5.6             |
+| 23  | ヘッダー上段を「空の段」として高さだけ残す                                        | Phase 3 では中身が両方とも無い。**段ごと描かない**                                                                          | 6.1                   |
+| 24  | `not-found.tsx` を行き止まりにする                                                | `← 一覧` が Phase 3 に無いため、戻る手段が消える                                                                            | 7.1                   |
+| 25  | ページを作った直後に `tsc` を回す                                                 | **`PageProps<"/新ルート">` は typegen 前だと解決しない。** コードが正しくても落ちる                                         | 1.2                   |
+| 26  | ルート表に `not-found` が出ないので効いていないと思う                             | `not-found.tsx` はルートではない。**SSR チャンクに入る**                                                                    | 1.3                   |
+| 27  | クライアントコンポーネントで `@/generated/prisma/client` から**値**を import する | **ビルドが `does not support external modules (request: node:module)` で落ちる。** 値は `@/generated/prisma/enums` から取る | 5.7                   |
+| 28  | 資料のトークン表に無い色を、近い既存トークンで代用する                            | 資料のコンポーネント仕様には書かれている。**推測ではないので `@theme` に足す**                                              | 5.7                   |
+| 17  | Tailwind のトークン名を打ち間違える                                               | **ビルドは通り、そのCSSだけ静かに空になる。** 成果物のCSSで確認する                                                         | recipe-analysis 6.2.6 |
+| 18  | `--size-tap` から `h-tap` が生えると思う                                          | Tailwind v4 に `--size-*` の名前空間は無い。`h-[var(--size-tap)]` と書く                                                    | recipe-analysis 6.2.6 |
 
 ## 9.1 Phase 2 から引き継ぐ環境側の落とし穴
 

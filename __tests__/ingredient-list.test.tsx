@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { IngredientList } from "@/app/recipes/[id]/ingredient-list";
@@ -219,5 +219,137 @@ describe("材料が無いレシピ", () => {
     render(<IngredientList ingredients={[]} servings={4} />);
 
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("材料（4人分）");
+  });
+});
+
+/**
+ * 絞り込み（requirements.md Req2 / design.md 6.2）。
+ *
+ * **既定は「全体」で、常にどれか1つが点灯する。**「選択なし」の状態は作らない。
+ */
+describe("絞り込みタブ", () => {
+  it("4つのタブを 全体 / 野菜 / 調味料 / その他 の順で出す", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const labels = screen.getAllByRole("button").map((b) => b.textContent);
+
+    expect(labels).toEqual(["全体", "野菜", "調味料", "その他"]);
+  });
+
+  it("開いた直後は「全体」が選択されている", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getByRole("button", { name: "全体" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("開いた直後は全カテゴリの材料が見えている", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+  });
+
+  it("常にどれか1つだけが点灯する（選択なしを作らない）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    const pressed = screen
+      .getAllByRole("button")
+      .filter((b) => b.getAttribute("aria-pressed") === "true");
+
+    expect(pressed).toHaveLength(1);
+    expect(pressed[0].textContent).toBe("野菜");
+  });
+
+  it("同じタブをもう一度押しても選択が外れない", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    const vegetable = screen.getByRole("button", { name: "野菜" });
+    fireEvent.click(vegetable);
+    fireEvent.click(vegetable);
+
+    expect(vegetable.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+});
+
+describe("絞り込みの結果", () => {
+  it("「野菜」を押すと野菜だけになり、他カテゴリの行が消える", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getByText("じゃがいも")).toBeDefined();
+    expect(screen.queryByText("しょうゆ")).toBeNull();
+    expect(screen.queryByText("牛こま切れ肉")).toBeNull();
+  });
+
+  it("絞り込んでもカテゴリ内の順序を保つ", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    const names = screen.getAllByRole("listitem").map((li) => li.textContent);
+
+    expect(names[0]).toContain("じゃがいも");
+    expect(names[1]).toContain("玉ねぎ");
+  });
+
+  it("1カテゴリだけのときはカテゴリ見出しを重ねない（点灯したピルが示している）", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+  });
+
+  it("「全体」に戻すと全件に戻る", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "調味料" }));
+    fireEvent.click(screen.getByRole("button", { name: "全体" }));
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
+  });
+
+  it("該当0件のカテゴリを選ぶと、空白ではなくその旨が出る", () => {
+    render(
+      <IngredientList
+        ingredients={[
+          {
+            id: "x",
+            recipeId: RECIPE_ID,
+            name: "塩",
+            amount: null,
+            category: Category.SEASONING,
+            order: 0,
+          },
+        ]}
+        servings={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "野菜" }));
+
+    expect(screen.getByText("該当する材料はありません。")).toBeDefined();
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  it("見出しの人数は絞り込みで変わらない", () => {
+    render(<IngredientList ingredients={INGREDIENTS} servings={4} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "その他" }));
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("材料（4人分）");
+  });
+});
+
+describe("材料が1件も無いレシピでは絞り込みを出さない", () => {
+  it("タブそのものが出ない（押しても何も起きない操作を置かない）", () => {
+    render(<IngredientList ingredients={[]} servings={null} />);
+
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 });
