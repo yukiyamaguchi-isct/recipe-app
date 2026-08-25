@@ -120,3 +120,49 @@ export async function updateRecipeTitle(
 
   return result.count;
 }
+
+// ---- Phase 4: recipe-list ----
+
+/**
+ * 一覧のカード（S-02）が使う列だけ。
+ *
+ * **材料と手順を持たない。** カードに出すのはサムネイル・タイトル・作成日だけで
+ * （引き継ぎ資料「レシピカード」）、10件のレシピに材料8件・手順6件が付くと
+ * **カードに使わない140行を運ぶことになる**（recipe-list design.md 1.5）。
+ */
+export type RecipeListItem = {
+  id: string;
+  title: string;
+  /** S3 のオブジェクトキー。**URLではない。** 表示用URLは参照時に署名付きで発行する */
+  imageKey: string;
+  /**
+   * **`Date` のまま返す。** 表示用の整形は `lib/recipes/date.ts` の責務で、
+   * この層は Prisma だけを知る（`.kiro/steering/architecture.md`）。
+   * **Client Component へ渡す前に文字列にすること**（design.md 落とし穴 #12）。
+   */
+  createdAt: Date;
+};
+
+/**
+ * userId でスコープした一覧の取得。**他人のレシピは1件も含まれない。**
+ *
+ * **`where` に `userId` を入れるのが唯一のスコープ**（`.kiro/steering/architecture.md`
+ * 「レシピは必ず userId でスコープする」）。**落としても動いてしまい、
+ * 1人分しかレシピを作らないテストでは気づけない**（design.md 落とし穴 #3）。
+ *
+ * **見分け方**: 2人分のレシピを作り、片方の userId で呼んで
+ * **もう片方が1件も返らない**こと。返ったらスコープが外れている。
+ *
+ * **`orderBy` を省かない。** 並び順が DB 依存になり、**手元では偶然新しい順に見える**
+ * （Phase 3 の落とし穴 #3 と同じ形）。
+ */
+export async function listRecipesForUser(userId: string): Promise<RecipeListItem[]> {
+  return prisma.recipe.findMany({
+    // ⚠️ ここが唯一の所有チェック（design.md 落とし穴 #3）
+    where: { userId },
+    // include ではなく select。カードに使わない材料・手順を運ばない（design.md 1.5）
+    select: { id: true, title: true, imageKey: true, createdAt: true },
+    // 新しいものが先頭。直前に撮ったレシピが一番上に来る（requirements.md Req1）
+    orderBy: { createdAt: "desc" },
+  });
+}

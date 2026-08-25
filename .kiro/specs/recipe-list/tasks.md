@@ -104,12 +104,23 @@
 
 ## 段階4: 自分のレシピを新しい順に一覧で取得できるようにする
 
-- [ ] `lib/repositories/recipe.ts` に `listRecipesForUser()` と `RecipeListItem` を追加する
-- [ ] `select` で4列（`id` / `title` / `imageKey` / `createdAt`）に絞る。**材料と手順を引かない**
-- [ ] `orderBy: { createdAt: "desc" }` を書く
-- [ ] `__tests__/recipe-repository.test.ts` に追加: **他人のレシピが1件も返らない**／降順で返る／`select` に材料が無い
+- [x] `lib/repositories/recipe.ts` に `listRecipesForUser()` と `RecipeListItem` を追加する
+- [x] `select` で4列（`id` / `title` / `imageKey` / `createdAt`）に絞る。**材料と手順を引かない**
+- [x] `orderBy: { createdAt: "desc" }` を書く
+- [x] ~~`__tests__/recipe-repository.test.ts` に追加~~ → **`__tests__/recipe-list-query.test.ts` を新規に作った**（下記）
 
 **受け入れ基準**: 検証コマンドが全部0。**`where` から `userId` を抜くと落ちるテスト**になっている
+
+### 実施時の記録
+
+- **テストは 422件 → 430件**（`recipe-list-query.test.ts` を8件で新規追加）
+- **テストファイルは既存の `recipe-repository.test.ts` に足さず、新規に分けた。** Phase 3 が `findRecipeForUser` → `recipe-find.test.ts`、`updateRecipeTitle` → `recipe-update.test.ts` と**関数ごとに1ファイル**にしていたため、その形に揃えた。`recipe-repository.test.ts` は `saveRecipe` 専用のまま
+  - 名前は `recipe-list-query.test.ts`。**段階5 で作る一覧画面のテストと衝突させない**ため（画面側は `recipe-list-page.test.tsx` にする）
+- **⚠️ Prisma のモックを「クエリの形を見るだけ」にしなかった。** Phase 3 の反省（**Repository をモックすると `where` から `userId` を抜いても全部通る**）がこの層にも効くため、**渡された `where` / `orderBy` / `select` を実際に適用する `fakeFindMany` を書いた**。他人のレシピを1件混ぜてあるので、**スコープが外れると本当に混ざって落ちる**
+- **壊して確かめた。**
+  - `where` から `userId` を落とす → **5件が落ちる**（形の assert だけでなく「他人のレシピが1件も含まれない」という**結果のテスト**も落ちる）
+  - `orderBy` を落とす → **2件が落ちる**
+- **`createdAt` は `Date` のまま返す。** 整形は `lib/recipes/date.ts` の責務で、この層は Prisma だけを知る。**Client Component へ渡す前に文字列にするのは画面側の仕事**（落とし穴 #12）
 
 ---
 
