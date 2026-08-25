@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { EmptyState } from "@/app/empty-state";
 import { RecipeCard } from "@/app/recipe-card";
 import { RecipeListHeader } from "@/app/recipe-list-header";
 import { getRecipeImageUrl } from "@/lib/clients/s3";
@@ -73,32 +74,47 @@ export default async function Home() {
 
   const recipes = await listRecipesForUser(session.user.id);
   const cards = await toCards(recipes);
+  const isEmpty = cards.length === 0;
 
   return (
     <div className="flex flex-1 flex-col">
       <RecipeListHeader count={cards.length} />
 
-      {/*
-       * ⚠️ **一覧だけが 1列（〜767px）/ 3列（768px〜）**（引き継ぎ資料 Responsive）。
-       * 他の画面は単一カラムのまま max-width 640px（recipe-view design.md 食い違い5）。
-       */}
-      <main className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3 md:gap-5 md:px-7 md:py-6">
-        {cards.map((card) => (
-          <RecipeCard key={card.id} {...card} />
-        ))}
-      </main>
+      {isEmpty ? (
+        <main className="p-4">
+          <EmptyState />
+        </main>
+      ) : (
+        /*
+         * ⚠️ **一覧だけが 1列（〜767px）/ 3列（768px〜）**（引き継ぎ資料 Responsive）。
+         * 他の画面は単一カラムのまま max-width 640px（recipe-view design.md 食い違い5）。
+         */
+        <main className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3 md:gap-5 md:px-7 md:py-6">
+          {cards.map((card) => (
+            <RecipeCard key={card.id} {...card} />
+          ))}
+        </main>
+      )}
 
       {/*
+       * FAB。**0件のときは出さない。**
+       *
+       * 空状態がすでに「写真を撮る」の主要ボタンを持っており、ほぼ空白の画面に
+       * **同じ行き先のボタンを2つ**置くことになるため。**これは資料の値ではなく判断**
+       * （資料は空状態をコンポーネント単体で描いていて、FAB との同居を示していない）。
+       *
        * ⚠️ 資料は FAB を position: absolute と書いているが、括弧書きで「実装は fixed」と
        * 明記している（落とし穴 #22）。モックがスマホ枠の中に描かれているための表記。
        */}
-      <Link
-        href="/upload"
-        aria-label="写真を撮る"
-        className="bg-link shadow-e2 fixed right-5 bottom-6 grid size-16 place-items-center rounded-full text-[2rem] leading-none text-white"
-      >
-        <span aria-hidden="true">＋</span>
-      </Link>
+      {!isEmpty && (
+        <Link
+          href="/upload"
+          aria-label="写真を撮る"
+          className="bg-link shadow-e2 fixed right-5 bottom-6 grid size-16 place-items-center rounded-full text-[2rem] leading-none text-white"
+        >
+          <span aria-hidden="true">＋</span>
+        </Link>
+      )}
     </div>
   );
 }

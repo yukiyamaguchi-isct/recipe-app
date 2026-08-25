@@ -178,3 +178,63 @@ describe("ログアウト（requirements.md Req8）", () => {
     expect(screen.getByRole("button", { name: "ログアウト" })).toBeDefined();
   });
 });
+
+describe("空状態（requirements.md Req3）", () => {
+  beforeEach(() => {
+    listRecipesMock.mockResolvedValue([]);
+  });
+
+  it("レシピが0件なら「レシピなし」を出す", async () => {
+    render(await Home());
+
+    expect(screen.getByText("レシピなし")).toBeDefined();
+  });
+
+  it("何をすれば並ぶのかの説明を出す（空白のままにしない）", async () => {
+    render(await Home());
+
+    expect(screen.getByText(/撮影すると/)).toBeDefined();
+  });
+
+  it("空状態から直接 /upload へ行ける", async () => {
+    render(await Home());
+
+    expect(screen.getByRole("link", { name: "写真を撮る" }).getAttribute("href")).toBe("/upload");
+  });
+
+  it("カードを1枚も描かない", async () => {
+    render(await Home());
+
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
+  });
+
+  it("件数は0件と出す", async () => {
+    render(await Home());
+
+    expect(screen.getByText("0件")).toBeDefined();
+  });
+
+  /**
+   * 空状態が同じ行き先の主要ボタンを持っているので、FAB と合わせて
+   * **ほぼ空白の画面にボタンが2つ**並ぶのを避ける（判断であって資料の値ではない）。
+   */
+  it("FAB を出さない（空状態のボタンと二重にしない）", async () => {
+    render(await Home());
+
+    expect(screen.getAllByRole("link", { name: "写真を撮る" })).toHaveLength(1);
+  });
+
+  it("0件でも署名付きURLを発行しに行かない", async () => {
+    await Home();
+
+    expect(getImageUrlMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("1件以上あるときは空状態を出さない", () => {
+  it("「レシピなし」が出ない", async () => {
+    render(await Home());
+
+    expect(screen.queryByText("レシピなし")).toBeNull();
+  });
+});
