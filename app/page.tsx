@@ -88,8 +88,16 @@ export default async function Home() {
         /*
          * ⚠️ **一覧だけが 1列（〜767px）/ 3列（768px〜）**（引き継ぎ資料 Responsive）。
          * 他の画面は単一カラムのまま max-width 640px（recipe-view design.md 食い違い5）。
+         *
+         * **下余白は FAB のぶん**（recipe-view の「最後の手順がバーに隠れる」の一覧版）。
+         * FAB は下端から 24px、高さ 64px なので**上端が 88px**。余白 16px を足して
+         * **104px**（`pb-26` = `--spacing` 4px × 26）。**無いと、一番下までスクロール
+         * したときに最後のカードの日付が FAB に隠れる。**
+         *
+         * `fixed` はビューポートに貼り付くので、**文書側に余白を持たせるしかない**。
+         * `md:pb-26` を重ねているのは、`md:py-6` が padding-block をまとめて上書きしうるため。
          */
-        <main className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3 md:gap-5 md:px-7 md:py-6">
+        <main className="grid grid-cols-1 gap-4 p-4 pb-26 md:grid-cols-3 md:gap-5 md:px-7 md:py-6 md:pb-26">
           {cards.map((card) => (
             <RecipeCard key={card.id} {...card} />
           ))}
