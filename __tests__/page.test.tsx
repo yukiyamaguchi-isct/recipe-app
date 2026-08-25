@@ -238,3 +238,27 @@ describe("1件以上あるときは空状態を出さない", () => {
     expect(screen.queryByText("レシピなし")).toBeNull();
   });
 });
+
+/**
+ * PC（768px〜）の導線（design.md 6.1）。
+ *
+ * ⚠️ **jsdom はメディアクエリを評価しない。** `md:hidden` / `md:inline-flex` は
+ * クラス名が付くだけで、要素は幅に関係なく DOM に存在する。**「スマホで FAB だけ」
+ * 「PC で ＋ 新規 だけ」の出し分けは、ここでは担保できない**（成果物のCSSで確認済み。
+ * 実機での見え方は段階13）。ここで固定するのは **props による有無**だけ。
+ */
+describe("PC の「＋ 新規」（design.md 6.1）", () => {
+  it("レシピがあるとき、ヘッダーに「＋ 新規」があり /upload を指す", async () => {
+    render(await Home());
+
+    expect(screen.getByRole("link", { name: "＋ 新規" }).getAttribute("href")).toBe("/upload");
+  });
+
+  it("0件のときは「＋ 新規」を出さない（空状態のボタンと二重にしない）", async () => {
+    listRecipesMock.mockResolvedValue([]);
+
+    render(await Home());
+
+    expect(screen.queryByRole("link", { name: "＋ 新規" })).toBeNull();
+  });
+});

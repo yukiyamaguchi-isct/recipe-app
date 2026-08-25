@@ -78,7 +78,7 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <RecipeListHeader count={cards.length} />
+      <RecipeListHeader count={cards.length} showNewButton={!isEmpty} />
 
       {isEmpty ? (
         <main className="p-4">
@@ -88,16 +88,19 @@ export default async function Home() {
         /*
          * ⚠️ **一覧だけが 1列（〜767px）/ 3列（768px〜）**（引き継ぎ資料 Responsive）。
          * 他の画面は単一カラムのまま max-width 640px（recipe-view design.md 食い違い5）。
+         * PC の padding 24px 28px と gap 20px はPCモック（`v2.dc.html` L579）の値。
          *
-         * **下余白は FAB のぶん**（recipe-view の「最後の手順がバーに隠れる」の一覧版）。
-         * FAB は下端から 24px、高さ 64px なので**上端が 88px**。余白 16px を足して
-         * **104px**（`pb-26` = `--spacing` 4px × 26）。**無いと、一番下までスクロール
-         * したときに最後のカードの日付が FAB に隠れる。**
+         * **スマホの下余白 104px は FAB のぶん**（recipe-view の「最後の手順がバーに
+         * 隠れる」の一覧版）。FAB は下端から 24px・高さ 64px なので**上端が 88px**、
+         * 余白 16px を足して 104px（`pb-26` = `--spacing` 4px × 26）。**無いと、
+         * 一番下までスクロールしたときに最後のカードの日付が FAB に隠れる。**
+         * `fixed` はビューポートに貼り付くので、**文書側に余白を持たせるしかない。**
          *
-         * `fixed` はビューポートに貼り付くので、**文書側に余白を持たせるしかない**。
-         * `md:pb-26` を重ねているのは、`md:py-6` が padding-block をまとめて上書きしうるため。
+         * **PC では `md:py-6`（24px）に戻す。** PC に FAB は無く、ヘッダーの「＋ 新規」が
+         * その役割を担うため、104px を残すと下端に無駄な空白が出る。
+         * `md:py-6` が `pb-26` を上書きできることは成果物のCSSで確認済み（tasks.md 段階8）。
          */
-        <main className="grid grid-cols-1 gap-4 p-4 pb-26 md:grid-cols-3 md:gap-5 md:px-7 md:py-6 md:pb-26">
+        <main className="grid grid-cols-1 gap-4 p-4 pb-26 md:grid-cols-3 md:gap-5 md:px-7 md:py-6">
           {cards.map((card) => (
             <RecipeCard key={card.id} {...card} />
           ))}
@@ -105,11 +108,12 @@ export default async function Home() {
       )}
 
       {/*
-       * FAB。**0件のときは出さない。**
+       * FAB。**スマホ専用**（`md:hidden`）で、**0件のときは出さない。**
        *
-       * 空状態がすでに「写真を撮る」の主要ボタンを持っており、ほぼ空白の画面に
-       * **同じ行き先のボタンを2つ**置くことになるため。**これは資料の値ではなく判断**
-       * （資料は空状態をコンポーネント単体で描いていて、FAB との同居を示していない）。
+       * - **PC では出さない。** PCモック（`v2.dc.html` L572-577）に FAB は無く、
+       *   ヘッダーの「＋ 新規」に置き換わっている。両方出すと同じ行き先が2つになる
+       * - **0件でも出さない。** 空状態がすでに「写真を撮る」の主要ボタンを持っており、
+       *   ほぼ空白の画面にボタンが2つ並ぶため。**こちらは資料の値ではなく判断**
        *
        * ⚠️ 資料は FAB を position: absolute と書いているが、括弧書きで「実装は fixed」と
        * 明記している（落とし穴 #22）。モックがスマホ枠の中に描かれているための表記。
@@ -118,7 +122,7 @@ export default async function Home() {
         <Link
           href="/upload"
           aria-label="写真を撮る"
-          className="bg-link shadow-e2 fixed right-5 bottom-6 grid size-16 place-items-center rounded-full text-[2rem] leading-none text-white"
+          className="bg-link shadow-e2 fixed right-5 bottom-6 grid size-16 place-items-center rounded-full text-[2rem] leading-none text-white md:hidden"
         >
           <span aria-hidden="true">＋</span>
         </Link>
