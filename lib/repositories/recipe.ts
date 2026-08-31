@@ -166,3 +166,47 @@ export async function listRecipesForUser(userId: string): Promise<RecipeListItem
     orderBy: { createdAt: "desc" },
   });
 }
+
+/**
+ * 削除の結果。`imageKey` は S3 の後片付けに使う。**消せなかったときは `null`。**
+ *
+ * 件数（`number`）ではなく `imageKey` を返すのは、**呼び出し側が S3 を消すのに要る**ため。
+ */
+export type DeletedRecipe = { imageKey: string } | null;
+
+/**
+ * レシピを削除する。**他人のレシピは消えない。**
+ *
+ * **⚠️ 消す前に `imageKey` を読む。** 消した後では取れず、**S3 の画像を後片付けできなくなる**
+ * （recipe-list design.md 落とし穴 #10）。だから `deleteMany` 一発ではなく、取得 → 削除の2手にする。
+ *
+ * **`delete({ where: { id } })` を使わない。** 所有チェックがクエリの外に出ると、
+ * 書き忘れても動いてしまい、自分のレシピしか作らないテストでは全部通ってしまう
+ * （落とし穴 #9 / recipe-view の `updateRecipeTitle` と同じ形）。
+ *
+ * `Ingredient` / `Step` は `onDelete: Cascade` なので **DB 側が消す**（design.md 2章）。
+ * **アプリ側で先に消す必要はない。**
+ *
+ * **見分け方**: 他人の userId で呼んで `null` が返ること。オブジェクトが返ったらスコープが外れている。
+ */
+export async function deleteRecipeForUser(
+  userId: string,
+  recipeId: string,
+): Promise<DeletedRecipe> {
+  // ⚠️ userId を where に入れるのが所有チェックの本体（落とし穴 #9）
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, userId },
+    select: { imageKey: true },
+  });
+
+  if (recipe === null) {
+    return null;
+  }
+
+  // ここでも userId を落とさない。**where を1箇所だけ緩める癖を作らない**
+  const result = await prisma.recipe.deleteMany({ where: { id: recipeId, userId } });
+
+  // 取得と削除の間に消えていた場合（二重送信など）はここが 0 になる。
+  // 呼び出し側からは「見つからない」と同じ扱いでよい
+  return result.count === 0 ? null : { imageKey: recipe.imageKey };
+}

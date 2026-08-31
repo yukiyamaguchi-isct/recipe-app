@@ -24,11 +24,12 @@ vi.mock("@aws-sdk/client-s3", async (importOriginal) => {
 // **こちらが何を渡しているか**（とりわけ expiresIn の単位）なので、関数ごと差し替える。
 vi.mock("@aws-sdk/s3-request-presigner", () => ({ getSignedUrl: getSignedUrlMock }));
 
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 import { StorageFailedError } from "@/lib/errors";
 import {
   buildImageKey,
+  deleteRecipeImage,
   getRecipeImageUrl,
   IMAGE_URL_EXPIRES_IN_SECONDS,
   uploadRecipeImage,
@@ -267,5 +268,56 @@ describe("getRecipeImageUrl（Phase 4。recipe-list design.md 1.1 / 5.2）", () 
     getSignedUrlMock.mockRejectedValue(new Error("network"));
 
     await expect(getRecipeImageUrl(IMAGE_KEY)).rejects.toThrow();
+  });
+});
+
+describe("deleteRecipeImage（Phase 4。design.md 5.3）", () => {
+  const IMAGE_KEY = "clx1a2b3c4d5e6f7g8h9/01abc5ef-06e6-40e0-bbe5-a1bedde6b3fa.jpg";
+
+  it("DeleteObjectCommand で Bucket / Key を送る", async () => {
+    await deleteRecipeImage(IMAGE_KEY);
+
+    const command = sendMock.mock.calls[0][0];
+    expect(command).toBeInstanceOf(DeleteObjectCommand);
+    expect(command.input).toEqual({ Bucket: "test-bucket", Key: IMAGE_KEY });
+  });
+
+  /**
+   * ⚠️ 落とし穴 #8。**投げない契約。**
+   *
+   * 呼ばれる時点で DB のレシピは既に消えている。ここで投げると Route Handler が
+   * 500 を返し、ユーザーは再試行して 404 を見ることになる。
+   */
+  it("削除に失敗しても例外を投げない", async () => {
+    sendMock.mockRejectedValue(new Error("Access Denied"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(deleteRecipeImage(IMAGE_KEY)).resolves.toBeUndefined();
+
+    errorSpy.mockRestore();
+  });
+
+  it("失敗を握り潰さない（imageKey 付きでログに残す）", async () => {
+    sendMock.mockRejectedValue(new Error("Access Denied"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await deleteRecipeImage(IMAGE_KEY);
+
+    expect(errorSpy).toHaveBeenCalled();
+    // 孤児の画像を後から特定できるよう、キーがログに乗っていること
+    expect(JSON.stringify(errorSpy.mock.calls[0])).toContain(IMAGE_KEY);
+
+    errorSpy.mockRestore();
+  });
+
+  it("S3_BUCKET_NAME が未設定でも投げない（送信は試みない）", async () => {
+    delete process.env.S3_BUCKET_NAME;
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(deleteRecipeImage(IMAGE_KEY)).resolves.toBeUndefined();
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
   });
 });

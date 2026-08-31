@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { StorageFailedError } from "@/lib/errors";
@@ -139,5 +144,31 @@ export async function getRecipeImageUrl(imageKey: string): Promise<string> {
   } catch (cause) {
     // 認証情報の不足やリージョン不一致がここに来る。生メッセージを画面に出さない
     throw new StorageFailedError({ cause });
+  }
+}
+
+/**
+ * レシピの画像を S3 から消す。
+ *
+ * **⚠️ 例外を投げない。** 呼ばれる時点で DB のレシピは既に消えており（design.md 5.3 の
+ * DB → S3 の順序）、**ここで失敗してもユーザーにできることは何も無い。**
+ * 「失敗しました」と出して再試行させても、2回目は 404 になるだけ（落とし穴 #8）。
+ *
+ * **握り潰しではない。** 孤児の画像が溜まっていることに気づけるよう、
+ * `imageKey` 付きでログに残す（`.kiro/steering/architecture.md`「例外を握り潰さない」）。
+ */
+export async function deleteRecipeImage(imageKey: string): Promise<void> {
+  const bucket = process.env.S3_BUCKET_NAME;
+  if (!bucket) {
+    console.error("[s3] S3_BUCKET_NAME が設定されていないため画像を削除できない", { imageKey });
+    return;
+  }
+
+  try {
+    await getClient().send(new DeleteObjectCommand({ Bucket: bucket, Key: imageKey }));
+  } catch (cause) {
+    // レシピ本体は消えているので、ユーザーにとって操作は完了している。
+    // **リクエストを失敗させない。** 残るのは S3 の孤児オブジェクトだけ
+    console.error("[s3] 画像の削除に失敗した", { imageKey, cause });
   }
 }

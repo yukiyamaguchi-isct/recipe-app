@@ -234,14 +234,27 @@
 
 ## 段階9: レシピを削除する API を追加する
 
-- [ ] `lib/repositories/recipe.ts` に `deleteRecipeForUser()` を追加する（**消す前に `imageKey` を読む**）
-- [ ] `lib/clients/s3.ts` に `deleteRecipeImage()` を追加する（**例外を投げない。ログに出す**）
-- [ ] `app/api/recipes/[id]/route.ts` に `DELETE` を追加する（PATCH と同じファイル）
-- [ ] 順序は **DB → S3**（落とし穴 #7）
-- [ ] `__tests__/recipe-delete.test.ts` / `recipe-delete-route.test.ts` を追加する。**jsdom で走らせない**（落とし穴 #25）
-- [ ] テスト: 他人の userId で `null`／401／404／**DBの後に S3 を呼ぶ**／S3 失敗でも 200
+- [x] `lib/repositories/recipe.ts` に `deleteRecipeForUser()` を追加する（**消す前に `imageKey` を読む**）
+- [x] `lib/clients/s3.ts` に `deleteRecipeImage()` を追加する（**例外を投げない。ログに出す**）
+- [x] `app/api/recipes/[id]/route.ts` に `DELETE` を追加する（PATCH と同じファイル）
+- [x] 順序は **DB → S3**（落とし穴 #7）
+- [x] `__tests__/recipe-delete.test.ts` / `recipe-delete-route.test.ts` を追加する。**jsdom で走らせない**（落とし穴 #25）
+- [x] テスト: 他人の userId で `null`／401／404／**DBの後に S3 を呼ぶ**／S3 失敗でも 200
 
 **受け入れ基準**: 検証コマンドが全部0。**`where` から `userId` を抜くと落ちるテスト**になっている
+
+### 実施時の記録
+
+- **テストは 449件 → 473件**（`recipe-delete.test.ts` 9件 / `recipe-delete-route.test.ts` 11件 / `s3-client.test.ts` に4件追加）
+- **⚠️ テストが設計の穴を1つ見つけた。** 「S3 の削除が失敗しても 200」というテストが**落ちた。**
+  - 原因: ルートは `await deleteRecipeImage(...)` を**メインの try の中**で呼んでいたので、`deleteRecipeImage` が投げれば `errorResponse` が 500 に変換してしまう
+  - 実物の `deleteRecipeImage` は投げない契約なので**実際には起きない**が、**「S3 の失敗で 200 を崩さない」はこのエンドポイントの要件**であって、他モジュールの不可視な不変条件に寄りかかるべきではない
+  - → **ルート側に専用の try/catch を足して、構造として担保した。** 契約が破れたら 500 を返すのではなく、ログを残して 200 を返す
+  - **これがまさに落とし穴 #8 の症状**（500 を見たユーザーが再試行して 404 を見る）。テストを先に書いていなければ、契約が破れた日に初めて発覚していた
+- **`deleteMany` 一発にせず、取得 → 削除の2手にした。** 消した後では `imageKey` を取れず、**S3 の後片付けができなくなる**（落とし穴 #10）。順序をテストで固定した
+- **取得と削除の両方の `where` に `userId` を入れ、両方をテストで固定した。** 「1箇所だけ緩める癖」を作らないため
+- **取得できたのに削除件数が0のケース**（削除の二重送信など）も `null` に落とし、呼び出し側からは「見つからない」と同じ扱いにした
+- **⚠️ vitest のワーカー起動が1度タイムアウトした**（`Failed to start forks worker` / `Timeout waiting for worker to respond`）。**テストの失敗ではなく実行環境側の一過性**で、再実行したら通った。同じ症状を見たら、まず単体で再実行する
 
 ---
 
