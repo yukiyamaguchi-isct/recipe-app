@@ -15,7 +15,14 @@ vi.mock("@/lib/repositories/recipe", () => ({ listRecipesForUser: listRecipesMoc
 vi.mock("@/lib/clients/s3", () => ({ getRecipeImageUrl: getImageUrlMock }));
 
 // 本物の redirect() は例外を投げて描画を中断する。その挙動を再現する。
-vi.mock("next/navigation", () => ({ redirect: redirectMock }));
+//
+// ⚠️ useRouter も要る。**カードが DeleteDialog を描くようになった**（段階10）ため、
+// redirect だけを返すモックにすると「No useRouter export is defined」で落ちる。
+// 一覧のテストでは削除の挙動を見ないので、refresh は空の spy でよい。
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 import Home from "@/app/page";
 
