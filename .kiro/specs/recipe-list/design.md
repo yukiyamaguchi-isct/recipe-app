@@ -557,6 +557,23 @@ if (!session?.user?.id) {
 - **削除ボタンはカードの上に重ねる**（サムネイル右上）。`<a>` の**外側**に置き、`position: absolute` で重ねる
 - **無いとどうなるか**: `<a>` の中に `<button>` を入れると**HTMLとして不正**（インタラクティブ要素の入れ子）で、削除を押したつもりがレシピが開く。**ブラウザによって挙動が違う**
 
+### ⚠️ ネイティブ `<dialog>` を使わない（✅ 実測 2026-08-25、段階10）
+
+**jsdom 30 は `HTMLDialogElement.showModal()` / `close()` を実装していない。**
+
+```
+showModal=undefined | close=undefined | threw=TypeError
+```
+
+再現: jsdom 環境で `document.createElement("dialog").showModal()` を呼ぶ。
+
+`<dialog>` ＋ `showModal()` は Escape・フォーカストラップ・背景の不活性化が**無料で付く**ので本来は第一候補だが、**採るとダイアログのテストが全滅する**（描画自体はできても開けない）。
+
+**素の `div` に `role="dialog"` `aria-modal="true"` を付けて組み、Escape は自前で拾う。**
+
+- **無いとどうなるか**: `showModal()` を呼ぶ実装にすると、**テストが「実装が悪い」ように見える TypeError で落ちる。** 落とし穴 #25（Route Handler を jsdom で走らせる）と同じ性質で、**環境の制約をコードの不具合と読み違える**
+- 代わりに失うもの: フォーカストラップと背景の不活性化。**Escape・背景クリック・初期フォーカスは自前で実装した**（フォーカストラップは MVP では見送り）
+
 ### ダイアログ
 
 - **ダイアログは Client Component。** どのレシピを消すかの state（引き継ぎ資料 State Management の `dialog`）を持つ

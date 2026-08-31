@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { DeleteDialog } from "@/app/delete-dialog";
+
 /**
  * 一覧のカード1枚（`UI_DESIGN.md` S-02 / recipe-list design.md 6.1）。
  *
@@ -26,8 +28,16 @@ type Props = {
 
 export function RecipeCard({ id, title, imageUrl, createdAt }: Props) {
   return (
-    // overflow-hidden でサムネイルの角をカードの角丸に合わせる（資料「レシピカード」）
-    <article className="bg-surface border-border shadow-e1 overflow-hidden rounded-md border">
+    // overflow-hidden でサムネイルの角をカードの角丸に合わせる（資料「レシピカード」）。
+    // relative は削除ボタンを重ねるため（下記）
+    <article className="bg-surface border-border shadow-e1 relative overflow-hidden rounded-md border">
+      {/*
+       * ⚠️ 削除ボタンは**リンクの外側**に置く（design.md 落とし穴 #13）。
+       * `<a>` の中に `<button>` を入れるとインタラクティブ要素の入れ子でHTMLとして不正になり、
+       * **削除を押したつもりがレシピが開く**。ブラウザによって挙動も違う。
+       */}
+      <DeleteDialog recipeId={id} title={title} />
+
       {/* カード全面がリンク。block にしないと余白部分が当たり判定から外れる */}
       <Link href={`/recipes/${id}`} className="block">
         {/*
