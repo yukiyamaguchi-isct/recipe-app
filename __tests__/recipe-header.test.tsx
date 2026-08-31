@@ -243,3 +243,38 @@ describe("確認モードのバナー", () => {
     expect(header?.textContent).toContain("確認画面");
   });
 });
+
+/**
+ * 上余白の持ち主（recipe-view design.md 6.4 / 落とし穴 #17）。
+ *
+ * 仕様の中段 padding は `0 16px 8px` で**上余白を持たない**。通常モードでは
+ * 上段の padding-bottom 6px がその役目を果たす。
+ *
+ * **⚠️ 確認モードには上段が無い**ので、何もしないとタイトルがバナーの境界線に
+ * 貼り付く。Phase 3 が中段に足していた 12px は、**いまや「上段が無いモード」
+ * だけに必要な値**になった。
+ */
+describe("タイトルの上余白", () => {
+  /** 中段そのものは仕様どおり上余白を持たない（二重にしない）。 */
+  it("中段自体は上余白を持たない", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title.parentElement?.className).not.toMatch(/(^|\s)pt-/);
+  });
+
+  it("確認モードではタイトルの上に余白がある（バナーに貼り付かない）", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="confirm" title="肉じゃが" />);
+
+    // 中段の外側のラッパが余白を持つ
+    const wrapper = screen.getByRole("heading", { level: 1 }).parentElement?.parentElement;
+    expect(wrapper?.className).toMatch(/(^|\s)pt-3(\s|$)/);
+  });
+
+  it("通常モードでは足さない（上段の余白と二重にしない）", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+
+    const wrapper = screen.getByRole("heading", { level: 1 }).parentElement?.parentElement;
+    expect(wrapper?.className ?? "").not.toMatch(/(^|\s)pt-/);
+  });
+});

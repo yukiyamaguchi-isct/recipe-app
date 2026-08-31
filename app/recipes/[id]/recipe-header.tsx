@@ -162,11 +162,17 @@ export function RecipeHeader({ recipeId, title: initialTitle, mode }: Props) {
         )}
 
         {/*
-         * 中段: タイトル 22px/700/lh1.4 ＋ `✎ 改題`。padding は仕様どおり 0 16px 8px。
-         * **Phase 3 で足していた上余白 12px は、上段を戻したので取り除いた**
+         * 中段: タイトル 22px/700/lh1.4 ＋ `✎ 改題`。padding は仕様どおり 0 16px 8px
+         * （`RecipeTitle` 側が持つ）。上余白は**上段の padding-bottom 6px が担う**。
+         *
+         * **⚠️ 確認モードだけは上余白を自前で足す。** 確認モードには上段が無いので、
+         * 何もしないとタイトルがバナーの境界線に貼り付く。**Phase 3 が中段に足していた
+         * 12px は、いまや「上段が無いモード」だけに必要な値**になった
          * （recipe-view design.md 6.4「上余白12px は仕様値ではない」/ 落とし穴 #17）。
          */}
-        <RecipeTitle recipeId={recipeId} title={title} onRenamed={setTitle} />
+        <div className={mode === "confirm" ? "pt-3" : undefined}>
+          <RecipeTitle recipeId={recipeId} title={title} onRenamed={setTitle} />
+        </div>
 
         {/*
          * 下段: ページ内の移動。**「移動」は面なし・枠なし・文字色 --color-link ＋ 方向記号**
