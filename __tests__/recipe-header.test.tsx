@@ -27,29 +27,72 @@ describe("RecipeHeader", () => {
 });
 
 /**
- * Phase 3 のヘッダーは2段（requirements.md 決着2・3 / design.md 6.1）。
+ * ヘッダー上段（recipe-list requirements.md Req7 で復元）。
  *
- * 上段に置くのは `← 一覧`（S-02 は Phase 4）と `編集`（S-05 は Phase 5）の2つだけで、
- * **どちらもこのフェーズでは出さない。** 遷移先が無いボタンを置かない。
+ * **Phase 3 では遷移先の S-02 が無いため段ごと描いていなかった。**
+ * Phase 4 で一覧ができたので `← 一覧` を戻した。
+ * `編集` は遷移先の S-05 が Phase 5 のため**まだ出さない**（決着2）。
  */
-describe("Phase 3 では上段を描かない", () => {
-  it("「← 一覧」を出さない", () => {
+describe("上段（Phase 4 で復元）", () => {
+  it("通常モードでは「← 一覧」を出し、一覧へ行ける", () => {
     render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+
+    expect(screen.getByRole("link", { name: "← 一覧" }).getAttribute("href")).toBe("/");
+  });
+
+  /**
+   * ⚠️ `UI_DESIGN.md` S-04c の差3。**確認モードでは出さない。**
+   * デザインHTMLのモックには描かれているが README が正（落とし穴 #19）。
+   * **空の段として高さも残さない。**
+   */
+  it("確認モードでは「← 一覧」を出さない", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="confirm" title="肉じゃが" />);
 
     expect(screen.queryByRole("link", { name: /一覧/ })).toBeNull();
   });
 
-  it("「編集」を出さない", () => {
-    render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+  it("「編集」はどちらのモードでも出さない（S-05 は Phase 5）", () => {
+    const { unmount } = render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+    expect(screen.queryByRole("button", { name: /編集/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /編集/ })).toBeNull();
+    unmount();
 
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="confirm" title="肉じゃが" />);
     expect(screen.queryByRole("button", { name: /編集/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /編集/ })).toBeNull();
   });
 
-  it("移動リンク以外のリンクを置かない", () => {
+  /**
+   * `← 一覧` は「移動」（面なし・枠なし・--color-link ＋ 方向記号）。
+   * **面や枠を足すと「操作」や「絞り込み」と混ざり、中核ルールが壊れる**（落とし穴 #14）。
+   */
+  it("「← 一覧」が面も枠も持たない（「移動」の見た目）", () => {
     render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
 
-    expect(screen.getAllByRole("link")).toHaveLength(2);
+    const className = screen.getByRole("link", { name: "← 一覧" }).className;
+    // ⚠️ 先頭が空白のときだけを見る。`\b` や素の /bg-/ だと `hover:bg-...` にも当たり、
+    // **hover 時だけ面が付く実装を見逃す**（recipe-view の「`-` でも境界になる」の反省）。
+    expect(className).not.toMatch(/(^|\s)bg-/);
+    expect(className).not.toMatch(/(^|\s)border/);
+  });
+
+  /**
+   * **数ではなく中身を固定する。** Phase 3 は「2つ」と数で見ていたが、
+   * 上段が戻って3つになった。数だけだと**別の何かが増えても気づけない**ので、
+   * 何が並んでいるかで見る。
+   */
+  it("ヘッダーのリンクは「← 一覧」と2つの移動リンクだけ", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+
+    const labels = screen.getAllByRole("link").map((link) => link.textContent);
+    expect(labels).toEqual(["← 一覧", "材料 ↓", "作り方 ↓"]);
+  });
+
+  it("確認モードでは移動リンク2つだけになる", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="confirm" title="肉じゃが" />);
+
+    const labels = screen.getAllByRole("link").map((link) => link.textContent);
+    expect(labels).toEqual(["材料 ↓", "作り方 ↓"]);
   });
 });
 
@@ -159,8 +202,8 @@ describe("現在位置", () => {
 /**
  * 確認モード（S-04c / requirements.md Req5）。
  *
- * **通常モードとの差はバナーだけ**（最下部固定バーは別コンポーネント）。
- * `← 一覧` はこのフェーズでは元から出していないので、実質の差は2点ではなく1点。
+ * **Phase 4 で `← 一覧` が入ったので、差はバナーと上段の2点になった**
+ * （最下部固定バーは別コンポーネント）。
  */
 describe("確認モードのバナー", () => {
   it("確認モードではバナーを出す", () => {
