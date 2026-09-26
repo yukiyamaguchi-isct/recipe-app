@@ -3,12 +3,12 @@
 **別セッションへ作業を引き継ぐための文書。** 新しいチャットを始めたら、まずこのファイルを読むこと。
 
 - 最終更新: 2026-09-26
-- 現在地: **Phase 4（recipe-list）実装完了。ログインが要る確認と本番確認が残っている**
-- **作業ブランチ: `feat/recipe-list`**（`origin` に push 済み。**`main` へは未マージ**）
-- **作業マシン: Windows → Mac に移行する。** Mac で最初にやることは0章
+- 現在地: **Phase 4（recipe-list）完了（2026-09-26）。Phase 5（recipe-edit）は着手前の決めごと（4.2）から**
+- **`feat/recipe-list` は PR #2 で `main` にマージ済み（2026-09-26）。** 本番にも自動デプロイされている
+- **作業マシン: Mac**（2026-09-26 に Windows から移行完了。0章は新しいマシンを足すときの手順として残す）
 - **本番URL: `https://recipe-app-nu-liart.vercel.app`**
 
-> **次は「Phase 4 の残り（4.1）」→「Phase 5（recipe-edit）」の順。** Phase 5 の着手前に決めることが 4.2 にある。
+> **次は「Phase 5（recipe-edit）」。** 着手前に決めることが 4.2 にある。Phase 4 の残り（4.1）は済んだ。
 
 現在地を自分で確認するコマンド:
 
@@ -16,13 +16,15 @@
 git fetch && git log --oneline -8 && git status --short --branch
 ```
 
-> **⚠️ ローカルのブランチが古いことがある。** セッション開始時は `git fetch` してから `git log --oneline origin/main -3` と `git log --oneline origin/feat/recipe-list -3` を見ること。**2026-08-24 のセッションでは、4コミット遅れた `HANDOVER.md` を読んで前提を取り違えかけた。**
+> **⚠️ ローカルのブランチが古いことがある。** セッション開始時は `git fetch` してから `git log --oneline origin/main -3` を見ること。**2026-08-24 のセッションでは、4コミット遅れた `HANDOVER.md` を読んで前提を取り違えかけた。**
 
 ---
 
-## 0. ⚠️ Mac で最初にやること（Windows から移行する）
+## 0. 新しいマシンでのセットアップ（Windows → Mac の移行で使った手順）
 
 **Phase 0〜4 はすべて Windows 機で作った。** コードは git で移るが、**git に入っていないものは手で運ぶ必要がある。**
+
+> **✅ 2026-09-26 に Mac で完了した**（`.env` を手で運ぶ → `npm ci` → `npx next typegen` → 0.3 が全部通った。Node v24.21.0 / npm 11.19.0）。記録は `.kiro/specs/recipe-list/tasks.md` 段階13。**Mac には `gh` が入っていなかった**（7.2）。
 
 ### 0.1 git に入っていない（手で運ぶ）もの
 
@@ -41,7 +43,7 @@ git fetch && git log --oneline -8 && git status --short --branch
 # 1. clone（private リポジトリなので gh auth login か SSH 鍵が要る）
 git clone https://github.com/yukiyamaguchi-isct/recipe-app.git
 cd recipe-app
-git switch feat/recipe-list   # main にマージ済みなら main でよい（1章冒頭を確認）
+# Phase 4 は main にマージ済み。main のままでよい
 
 # 2. Node は 24 系に揃える（Windows は v24.16.0 / npm 11.13.0。バージョン固定ファイルは無い）
 node -v
@@ -79,19 +81,19 @@ npm run dev            # http://localhost:3000 → Google でログインでき�
 
 ## 1. 今どこまで終わっているか
 
-| #   | feature           | 状態                                              | 詳細                           |
-| --- | ----------------- | ------------------------------------------------- | ------------------------------ |
-| 0   | `foundation`      | **完了**                                          | `.kiro/specs/foundation/`      |
-| 1   | `user-auth`       | **完了**                                          | `.kiro/specs/user-auth/`       |
-| 2   | `recipe-analysis` | **完了**（本番確認済み）                          | `.kiro/specs/recipe-analysis/` |
-| 3   | `recipe-view`     | **完了**（本番確認済み。PR #1 でマージ）          | `.kiro/specs/recipe-view/`     |
-| 4   | `recipe-list`     | **実装完了 / ログインが要る確認と本番確認が残り** | `.kiro/specs/recipe-list/`     |
-| 5   | `recipe-edit`     | 未着手                                            | 4.2                            |
+| #   | feature           | 状態                                     | 詳細                           |
+| --- | ----------------- | ---------------------------------------- | ------------------------------ |
+| 0   | `foundation`      | **完了**                                 | `.kiro/specs/foundation/`      |
+| 1   | `user-auth`       | **完了**                                 | `.kiro/specs/user-auth/`       |
+| 2   | `recipe-analysis` | **完了**（本番確認済み）                 | `.kiro/specs/recipe-analysis/` |
+| 3   | `recipe-view`     | **完了**（本番確認済み。PR #1 でマージ） | `.kiro/specs/recipe-view/`     |
+| 4   | `recipe-list`     | **完了**（本番確認済み。PR #2 でマージ） | `.kiro/specs/recipe-list/`     |
+| 5   | `recipe-edit`     | 未着手                                   | 4.2                            |
 
 ### ブランチのマージ状況
 
 - **Phase 0〜3 は `origin/main` に入っている。** Phase 3 は [PR #1](https://github.com/yukiyamaguchi-isct/recipe-app/pull/1) でマージ（2026-08-25、`f2bdec6`）
-- **Phase 4 は `feat/recipe-list` にある。`main` には未マージ**（2026-09-17 時点。`git log --oneline origin/main..origin/feat/recipe-list` で差分を確認できる）
+- **Phase 4 は [PR #2](https://github.com/yukiyamaguchi-isct/recipe-app/pull/2) でマージ**（2026-09-26、`25d7d43`）
 - **`main` に push / マージすると Vercel が本番へ自動デプロイする**（2026-08-25 に確認）
 
 ### Phase 4 — recipe-list でできたこと
@@ -123,6 +125,17 @@ npm run dev            # http://localhost:3000 → Google でログインでき�
 | `deleteRecipeImage` で S3 から消える | ✅ 使い捨てオブジェクトで **200 → 403**（本物のレシピは消していない）    |
 | JST の朝9時前に保存したレシピの日付  | ✅ **実データに2件あり**、`TZ=UTC`（Vercel と同じ）でも JST の日付で表示 |
 | 開発サーバーの起動と CSS             | ✅ `--recipe-header-h: 160px` が効いている。コンソールエラーなし         |
+
+**ログインが要る確認と本番確認**（2026-09-26、Mac。同 段階13「実施時の記録（Mac）」）
+
+| 項目                                   | 結果                                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **画面からの削除**                     | ✅ **DB（`Recipe` / `Ingredient` / `Step`）も S3 も消えた**。「明太子しいたけ」の古いほうを消した |
+| **タイトル2行のアンカー着地点**        | ✅ 見出しがヘッダー下端のすぐ下に来る（ヘッダー 236.6px）                                         |
+| 確認モードのタイトル上余白             | ✅ バナーとの間に12px                                                                             |
+| 1列 / 3列・FAB / 「＋ 新規」の出し分け | ✅ **767px と 768px の境目で切り替わる**                                                          |
+| 本番（スマホ実機・モバイル回線）       | ✅ 日付が UTC でもずれない。**表示速度は「気にならない」→ サムネイルは作らない**                  |
+| 本番での削除                           | **通していない**（ユーザー判断。Vercel 側の認証情報での `DeleteObject` は未確認）                 |
 
 ### Phase 3 以前の要点
 
@@ -161,7 +174,7 @@ npm run dev            # http://localhost:3000 → Google でログインでき�
 | 論点                 | 決定                                                                                            |
 | -------------------- | ----------------------------------------------------------------------------------------------- |
 | 署名付きURL          | **有効期限1時間（`3600` 秒）/ ページ表示時にまとめて発行 / DBに保存しない**                     |
-| サムネイル用の小画像 | **まだ作らない。** 実機の体感を見て判断（4.1 の数字が材料）                                     |
+| サムネイル用の小画像 | **作らない**（2026-09-26。本番をスマホのモバイル回線で見て「気にならない」）                    |
 | 削除                 | **一覧から削除できる。S3 の画像も消す。順序は DB → S3**                                         |
 | ログアウト           | **一覧ヘッダーの右端。見た目は「操作」＝枠線ボタン**                                            |
 | 作成日               | **「2026年8月12日」。サーバーで `Asia/Tokyo` を明示して文字列にしてから渡す**                   |
@@ -196,8 +209,10 @@ npm run dev            # http://localhost:3000 → Google でログインでき�
 設定済みかどうかだけを確認するコマンド（**値は表示しない**。Mac / Linux の bash / zsh 用）:
 
 ```bash
-while IFS= read -r line; do case "$line" in ''|'#'*) continue;; esac; k="${line%%=*}"; v="${line#*=}"; [ -n "$v" ] && echo "$k: 設定あり" || echo "$k: 空"; done < .env
+while IFS= read -r line || [ -n "$line" ]; do case "$line" in ''|'#'*) continue;; esac; k="${line%%=*}"; v="${line#*=}"; [ -n "$v" ] && echo "$k: 設定あり" || echo "$k: 空"; done < .env
 ```
+
+> **⚠️ `|| [ -n "$line" ]` を消さないこと。** `.env` の最終行に改行が無いと、`read` は最後の行を返さずに終わる。**2026-09-26 に Mac でこれを踏み、`S3_BUCKET_NAME` が「無い」ように見えた**（実際は設定済み）。
 
 > **`.env` の中身をそのまま出力しないこと。** 会話ログに秘密情報が残る。
 
@@ -207,24 +222,18 @@ while IFS= read -r line; do case "$line" in ''|'#'*) continue;; esac; k="${line%
 
 ## 4. 次にやること
 
-### 4.1 ⚠️ Phase 4 の残り（Phase 5 の前に済ませる）
+### 4.1 ✅ Phase 4 の残り（2026-09-26 に完了）
 
-**ログインが要る確認は Windows 機では未実施。** Mac のセットアップ（0章）が終わったら、まずこれを通す。
+**ログインが要る確認・本番のスマホ実機での確認を Mac で通した。** 結果は1章の表と `.kiro/specs/recipe-list/tasks.md` 段階13「実施時の記録（Mac）」。
 
-#### ① ローカルで、ログインして確認する
+**確認できなかったもの**（理由と代わりの担保は同 段階13）:
 
-手順の全体は `.kiro/specs/recipe-list/design.md` 10章（35項目）。**未実施の項目と理由は `tasks.md` 段階13 の表にある。** 特に見るべきもの:
+- 10章 #10: 3行以上になるタイトルが実データに無い
+- 10章 #11・12・23: 空状態（0件のアカウントが無い）
+- 10章 #24: 他人のレシピへの DELETE（Google アカウントが1つ）
+- **本番での削除**（ユーザー判断で見送り）。Vercel の環境変数の認証情報で S3 の `DeleteObject` が効くかは未確認。失敗しても残るのはユーザーに見えない孤児の画像だけ。**`npm run check:images` は DB 起点なので孤児は見つけられない**
 
-| 確認                                                       | なぜ重要か                                                                    |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **タイトルが2行のレシピで「作り方 ↓」を押す**              | **段階12 でヘッダーが3段に戻り高さが変わった。** 着地点がヘッダーに潜らないか |
-| **画面から削除する**                                       | 部品ごとには確認済みだが、**画面から通したことが無い**                        |
-| 3列（768px 以上）と FAB（767px 以下）の出し分け            | **jsdom はメディアクエリを評価しないので自動テストで担保できていない**        |
-| 確認モード（`?confirm=1`）でタイトルがバナーに貼り付かない | 段階12 の直後に一度壊しかけて直した箇所                                       |
-
-**画面からの削除を試すと、本物のレシピが1件消える。ローカルと本番は同じ DB。** 消してもよいレシピで試すこと（2026-09-17 時点で「明太子しいたけ」が**2件**ある。同じ写真を2回解析したもの）。
-
-削除が S3 まで届いたかの確認方法:
+削除の確認方法（Phase 5 以降でも使える）:
 
 ```bash
 npm run check:images                    # 消す前。消すレシピの imageKey を控える
@@ -234,15 +243,6 @@ npm run check:images -- "<控えた imageKey>"   # 「❌ S3に無い（403…�
 ```
 
 **無いオブジェクトには 404 ではなく 403 が返る**（IAM に `s3:ListBucket` が無いため。`design.md` 1.3.1）。**403 = 消えた、で正しい。**
-
-#### ② PR を作って `main` にマージし、本番で確認する
-
-Phase 3 と同じ流れ（PR #1）。**マージすると Vercel が本番に自動デプロイする。**
-
-- スマホ実機で一覧を開き、**写真の読み込みの体感**を見る → **サムネイル生成が要るかを決める**
-  - 参考値（固定回線）: 画像6件の合計 **3.3MB**、並列取得 **約1.9秒**。HTML 側（署名6件）は **48ms**
-  - スマホは1列 ＋ `loading="lazy"` なので、最初に取りに行くのは画面内の1〜2枚
-- 結果を `tasks.md` 段階13 に書き足し、`.kiro/README.md` のフェーズ表を「完了」にする
 
 ### 4.2 ⚠️ Phase 5（recipe-edit）の着手前に決めること
 
@@ -377,7 +377,8 @@ S-05 レシピ編集（`UI_DESIGN.md` S-05）。**材料・分量・カテゴリ
 ### 7.2 git / GitHub
 
 - リモート: `yukiyamaguchi-isct/recipe-app`（private）
-- **Mac では `gh auth login` を先に済ませる。** clone・push・PR 作成に要る
+- **Mac では `gh auth login` を先に済ませる。** PR 作成に要る
+  - **⚠️ 2026-09-26 時点で Mac に `gh` が入っていなかった**（`command not found: gh`）。`brew install gh` → `gh auth login`（認証はユーザーが行う）
 - `git push` / `gh` が権限エラーになり、環境変数 `GITHUB_TOKEN` が設定されている場合は `env -u GITHUB_TOKEN` を前置する（その変数には push 権限が無い）
 - **`git pull` の後は開発サーバーを再起動する。** Turbopack が取りこぼすことがある。直らなければ `.next` を消す
 
@@ -434,67 +435,31 @@ Windows 機ではこのプラグインが入っていて、**ファイル編集�
 **⚠️ 貼る前に「←」の箇所を自分の状況に書き換えること。**
 
 ```
-recipe-app のレシピアプリの続きを Mac でやります。Windows 機から移ってきました。
+recipe-app のレシピアプリの続きをやります。
 
 まず HANDOVER.md を読んでください。そのあと、そこで指示されている
 REQUIREMENTS.md / UI_DESIGN.md / .kiro/steering/ / .kiro/README.md と、
-.kiro/specs/recipe-list/design.md（Phase 4 の設計。落とし穴40件）と
-.kiro/specs/recipe-list/tasks.md の段階13（未実施の確認項目）を読んでください。
+.kiro/specs/recipe-list/design.md（Phase 4 の設計。落とし穴40件）を読んでください。
 
 読んだうえで、「今どこまで終わっていて、次に何をするか」を報告してください。
 
-⚠️ 最初に git fetch して、origin/main と origin/feat/recipe-list の両方を
-見てください。ローカルが古いことがあります。
+⚠️ 最初に git fetch して、origin/main を見てください。ローカルが古いことがあります。
 
 ## 状況
 
-- Phase 4（recipe-list）は実装が終わっていますが、**完了していません。**
-  ログインが要る確認と本番確認が残っています（HANDOVER.md 4.1）。
-- 作業ブランチは feat/recipe-list。main には未マージです。
-- .env は手で運びました ← まだなら「まだです」に書き換える
-- npm ci と npx next typegen まで済んでいます ← 済んでいなければそう書く
-- MCP とプラグインはリポジトリに入っていないので、Mac ではまだ入れていません
-  ← 入れたなら書く。詳細は HANDOVER.md 7.5
+- Phase 4（recipe-list）は完了しています（2026-09-26。PR #2 でマージ、本番確認済み）
+- 次は Phase 5（recipe-edit）です ← 決めごと（HANDOVER.md 4.2）が済んでいればそう書く
 
 ## この順でやりたい
 
-### 1. セットアップの確認（HANDOVER.md 0章）
-
-npm run check:s3 / npm run check:images / npm run test（503件）/ npm run dev が
-通るか確認してください。落ちたら 0.2 の順序（.env → npm ci → next typegen）を疑って
-ください。
-
-### 2. Phase 4 の残りを片付ける（HANDOVER.md 4.1）
-
-ログインして画面から確認します。**操作は私がやるので、見るべき点と手順を
-一つずつ指示してください。** 全体の手順は
-.kiro/specs/recipe-list/design.md 10章（35項目）、未実施の一覧は tasks.md 段階13
-にあります。
-
-特に見たいのは:
-- タイトルが2行のレシピで「作り方 ↓」を押したとき、見出しがヘッダーに隠れないか
-  （段階12 でヘッダーが3段に戻り、--recipe-header-h を 160px に変えたため）
-- 画面からの削除（DB と S3 の両方が消えるか。npm run check:images で確認）
-- PC 3列（768px以上）とスマホ FAB（767px以下）の出し分け
-- 確認モード（?confirm=1）でタイトルがバナーに貼り付かないか
-
-⚠️ 画面から削除すると本物のレシピが1件消えます。ローカルと本番は同じ DB です。
-どのレシピで試すか私に確認してから進めてください。
-
-終わったら結果を tasks.md 段階13 に書き足し、PR を作って main にマージし、
-本番のスマホで確認します。**マージは本番デプロイなので、その前に私に確認して
-ください。** 一覧の表示速度を見て、サムネイル生成が要るかもそこで決めます。
-
-### 3. Phase 5（recipe-edit）の着手前に決める（HANDOVER.md 4.2）
+### 1. Phase 5（recipe-edit）の着手前に決める（HANDOVER.md 4.2）
 
 3つあります。**それぞれ案と、どれが良いかの意見を添えて聞いてください。**
 根拠になる資料（引き継ぎ資料の README「Screens 6」と v2.dc.html の
 「06 レシピ編集」、REQUIREMENTS.md 4.7）は先に読んでおいてください。
 
-1. 手順（作り方）の編集画面がデザイン資料に無い。要件は編集できることを
-   求めているが、資料の編集画面は「材料を編集」だけ
-2. 確認モードのヘッダー上段をどうするか。資料の字面どおりだと上段に「編集」だけが
-   出て、最下部バーの「編集する」と重複する
+1. 手順（作り方）の編集画面がデザイン資料に無い
+2. 確認モードのヘッダー上段をどうするか
 3. 未保存で画面を離れるときの引き止め方（Next.js 16 でのアプリ内遷移の止め方は、
    記憶で書かず実物を確認してください）
 
@@ -503,8 +468,8 @@ npm run check:s3 / npm run check:images / npm run test（503件）/ npm run dev 
 ## 約束
 
 - ブランチ作成・コミット・push は、私の許可を得てから実行してください
+- **main への push は本番デプロイです。** 文書の更新もブランチを切って PR にしてください
 - 段階ごとに、着手前に「全体のどこか」「次に何をするか」を報告してください
 - 記憶で API の形や制約値を書かず、node_modules の実物か公式ドキュメントで
   確認してください
-- 実装はまだ始めないでください。まず 1 の確認と報告をお願いします
 ```

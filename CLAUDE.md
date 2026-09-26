@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-**Phase 4（recipe-list）実装完了 / ログインが要る確認と本番確認が残り / Phase 5（recipe-edit）未着手**（2026-09-17 時点）。
+**Phase 4（recipe-list）完了 / Phase 5（recipe-edit）未着手**（2026-09-26 時点）。
 
-**作業マシンを Windows から Mac に移した。** Mac で最初にやるセットアップは `HANDOVER.md` の0章（**`.env` を置いてから `npm ci`。逆にすると落ちる**）。
+**作業マシンは Mac**（2026-09-26 に Windows から移行済み）。新しいマシンでのセットアップは `HANDOVER.md` の0章（**`.env` を置いてから `npm ci`。逆にすると落ちる**）。
 
-写真をアップロードすると Claude が材料と作り方を読み取り、3分類して保存し、確認画面（S-04c）に着地する。保存したレシピは `/recipes/[id]` で読める。**ログイン後のホーム（`/`）はレシピ一覧（S-02）** で、写真付きのカードが並び、一覧から削除（S3 の画像ごと）できる。Phase 3 までは本番（`https://recipe-app-nu-liart.vercel.app`）で動作確認済み。**Phase 4 は `feat/recipe-list` にあり、`main` には未マージ。**
+写真をアップロードすると Claude が材料と作り方を読み取り、3分類して保存し、確認画面（S-04c）に着地する。保存したレシピは `/recipes/[id]` で読める。**ログイン後のホーム（`/`）はレシピ一覧（S-02）** で、写真付きのカードが並び、一覧から削除（S3 の画像ごと）できる。Phase 4 までは本番（`https://recipe-app-nu-liart.vercel.app`）で動作確認済み（**Phase 4 は PR #2 で `main` にマージ、2026-09-26**）。
 
 **まだ無いのはレシピの編集（S-05）。** 材料・分量・カテゴリ・手順を直す画面。
 
@@ -45,10 +45,9 @@ recipe-app/
 
 ### 次にやること
 
-**① Phase 4 の残り → ② Phase 5（recipe-edit）。** 詳細は `HANDOVER.md` の4章。
+**Phase 5（recipe-edit）。** 詳細は `HANDOVER.md` の4章。Phase 4 の残り（4.1）は 2026-09-26 に済んだ（**サムネイル生成は作らないと決定**）。
 
-- **① Phase 4 の残り**（`HANDOVER.md` 4.1）: ログインして画面から通す確認（特に**タイトル2行でのアンカー着地点**と**画面からの削除**）→ PR を作って `main` にマージ → 本番のスマホで確認 → サムネイル生成が要るかを決める
-- **② Phase 5 の着手前に決めること**（`HANDOVER.md` 4.2）:
+- **Phase 5 の着手前に決めること**（`HANDOVER.md` 4.2）:
   - **手順（作り方）の編集画面が資料に無い。** 要件（`REQUIREMENTS.md` 4.7）は求めているが、引き継ぎ資料の編集画面は「材料を編集」だけ
   - 確認モードの `[編集する]` と S-04 ヘッダーの `編集` を戻す。**確認モードの上段をどうするか**と、S-04 からの削除の置き場所
 - **視覚仕様は確定済み**（`Design_引き継ぎ資料/` の README「Screens 6」）。トークンは `app/globals.css` の `@theme` に導入済み
