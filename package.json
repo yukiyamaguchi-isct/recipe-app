@@ -14,12 +14,14 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "check:s3": "node scripts/check-s3.mjs"
+    "check:s3": "node scripts/check-s3.mjs",
+    "check:images": "node scripts/check-recipe-images.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
     "@auth/prisma-adapter": "2.11.3",
     "@aws-sdk/client-s3": "^3.1111.0",
+    "@aws-sdk/s3-request-presigner": "^3.1116.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "dotenv": "^17.4.2",

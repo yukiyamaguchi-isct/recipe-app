@@ -136,9 +136,9 @@ describe("not-found 画面", () => {
   it("行き止まりにしない（戻る導線がある）", () => {
     render(<RecipeNotFound />);
 
-    // 「← 一覧」は Phase 4 まで出さないため、ここが唯一の戻る手段になる
-    // （design.md 落とし穴 #24）
-    expect(screen.getByRole("link", { name: "ホームへ戻る" }).getAttribute("href")).toBe("/");
+    // Phase 4 で / が S-02（レシピ一覧）になったので、リンク先はそのままラベルだけ変えた
+    // （recipe-list design.md 6.6 / 落とし穴 #24）
+    expect(screen.getByRole("link", { name: "レシピ一覧へ戻る" }).getAttribute("href")).toBe("/");
   });
 
   it("どちらの理由かを文言で出し分けない", () => {

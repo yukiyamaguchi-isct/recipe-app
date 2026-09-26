@@ -121,7 +121,7 @@ export function RecipeTitle({ recipeId, title, onRenamed }: Props) {
   }
 
   return (
-    <div className="px-4 pt-3 pb-2">
+    <div className="px-4 pb-2">
       {/*
        * **編集中も <h1> を残す。** 見出しが一時的に消えると文書構造が崩れる。
        * <form> は phrasing content ではないので <h1> の中には入れられない。

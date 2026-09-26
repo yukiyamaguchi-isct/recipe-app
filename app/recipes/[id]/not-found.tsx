@@ -20,14 +20,16 @@ export default function RecipeNotFound() {
 
       {/*
        * ⚠️ この画面を行き止まりにしない（design.md 落とし穴 #24）。
-       * ヘッダーの「← 一覧」は Phase 4 まで出さないと決まった（requirements.md 決着3）ので、
-       * 戻る先が他に無い。Phase 4 で S-02（一覧）に差し替える。
+       *
+       * **Phase 4 で `/` が S-02（レシピ一覧）になったので、リンク先は変えずラベルだけ直した**
+       * （recipe-list design.md 6.6）。Phase 3 の申し送りは「S-02 に差し替える」だったが、
+       * 元から `/` を指していたため実際に必要だったのはラベルの変更だけ。
        */}
       <Link
         href="/"
         className="border-link text-link hover:bg-primary-soft flex h-[var(--size-tap-lg)] w-full items-center justify-center rounded-md border-[1.5px] px-6 text-lead font-medium transition-colors duration-[120ms]"
       >
-        ホームへ戻る
+        レシピ一覧へ戻る
       </Link>
     </main>
   );

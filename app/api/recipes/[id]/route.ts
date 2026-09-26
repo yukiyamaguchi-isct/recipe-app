@@ -1,8 +1,9 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { requireUserId } from "@/lib/auth/session";
+import { deleteRecipeImage } from "@/lib/clients/s3";
 import { RecipeNotFoundError, ValidationError } from "@/lib/errors";
 import { normalizeTitle, titleProblem } from "@/lib/recipes/title";
-import { updateRecipeTitle } from "@/lib/repositories/recipe";
+import { deleteRecipeForUser, updateRecipeTitle } from "@/lib/repositories/recipe";
 
 /**
  * PATCH /api/recipes/[id]
@@ -88,4 +89,49 @@ async function readTitle(request: Request): Promise<string> {
   }
 
   return title;
+}
+
+/**
+ * DELETE /api/recipes/[id]
+ *
+ * レシピを削除する（recipe-list requirements.md Req5）。
+ * **`analyze`（POST）・上の `PATCH` に続く3つ目の保護付きエンドポイント。**
+ *
+ * **順序は DB → S3。逆にしない**（recipe-list design.md 5.3 / 落とし穴 #7）。
+ * 逆にすると、S3 の削除が成功して DB が失敗したときに**画像の無いレシピが
+ * ユーザーに残る**。一覧に壊れたカードが出続け、もう一度消すしか直せない。
+ * DB を先に消せば、失敗して残るのは**ユーザーには見えない S3 の孤児**だけになる。
+ */
+export async function DELETE(_request: Request, context: RouteContext<"/api/recipes/[id]">) {
+  try {
+    // ⚠️ Route Handler の params も Promise（落とし穴 #23）
+    const { id } = await context.params;
+
+    // クライアントが送ってきた userId は見ない。**セッションだけが根拠**
+    const userId = await requireUserId();
+
+    const deleted = await deleteRecipeForUser(userId, id);
+
+    // null は「存在しない」か「他人のもの」。**区別せず 404**（Phase 3 と同じ理由）。
+    // 出し分けると、IDを総当たりして他人のレシピの存在を確かめられる
+    if (deleted === null) {
+      throw new RecipeNotFoundError();
+    }
+
+    // **DB の後。** ここで失敗してもレシピは消えているので、リクエストは成功で返す。
+    //
+    // ⚠️ `deleteRecipeImage()` 自身が「投げない」契約だが、**その契約に寄りかからない。**
+    // 契約が破れると 500 が返り、ユーザーは再試行して 404 を見ることになる（落とし穴 #8）。
+    // **「S3 の失敗で 200 を崩さない」のはこのエンドポイントの要件**なので、ここで担保する。
+    try {
+      await deleteRecipeImage(deleted.imageKey);
+    } catch (cause) {
+      // 通常ここには来ない（来たら s3.ts 側の契約違反）。**握り潰さずログに残す**
+      console.error("[api] 画像の削除で想定外の例外", { recipeId: id, cause });
+    }
+
+    return successResponse({ id });
+  } catch (error) {
+    return errorResponse(error);
+  }
 }

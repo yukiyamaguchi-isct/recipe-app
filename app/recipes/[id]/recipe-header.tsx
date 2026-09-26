@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import type { RecipeViewMode } from "./mode";
@@ -8,11 +9,18 @@ import { RecipeTitle } from "./recipe-title";
 /**
  * S-04 の固定ヘッダー（`UI_DESIGN.md` S-04 / design.md 6.1）。
  *
- * **デザインは3段構成だが、Phase 3 は2段。** 上段に置くのは `← 一覧`（→ S-02 は Phase 4）と
- * `編集`（→ S-05 は Phase 5）の2つだけで、**どちらもこのフェーズでは出さないと決まった**
- * （requirements.md 決着2・3）。**空の段を高さだけ残さず、段ごと描かない。**
+ * **デザインは3段構成。Phase 4 で上段が戻り、通常モードは3段になった。**
  *
- * **Phase 4 / 5 で上段を戻すときは、design.md 6.1 の padding 6px 12px を復元すること。**
+ * | 段   | 中身                       | 状態                                                     |
+ * | ---- | -------------------------- | -------------------------------------------------------- |
+ * | 上段 | `← 一覧` / ~~`編集`~~      | **`← 一覧` のみ。** `編集` は S-05 が Phase 5 のため未実装 |
+ * | 中段 | タイトル ＋ `✎ 改題`       | Phase 3                                                  |
+ * | 下段 | `材料 ↓` `作り方 ↓`        | Phase 3                                                  |
+ *
+ * **⚠️ 確認モードでは上段を出さない**（`UI_DESIGN.md` S-04c の差3）。確認モードは2段のまま。
+ *
+ * **Phase 5 で `編集` を戻すときは、上段を `justify-between` にして右端に置く**
+ * （recipe-view design.md 6.1 の表: 左 `← 一覧` / 右 `編集`）。
  */
 
 type Section = "ingredients" | "steps";
@@ -130,11 +138,41 @@ export function RecipeHeader({ recipeId, title: initialTitle, mode }: Props) {
 
       <div className="mx-auto w-full max-w-[640px]">
         {/*
-         * 中段: タイトル 22px/700/lh1.4 ＋ `✎ 改題`。仕様の padding は 0 16px 8px だが、
-         * **上段が無いぶんの上余白（12px）をここで持つ。** 無いと画面の縁に文字が貼り付く。
-         * これは仕様値ではなくこちらの判断（design.md 6.4）。余白は RecipeTitle 側にある。
+         * 上段（recipe-list Req7 で復元。padding 6px 12px は recipe-view design.md 6.1 の表）。
+         *
+         * **Phase 3 では遷移先の S-02 が無いため段ごと描いていなかった。** Phase 4 で
+         * 一覧ができたので `← 一覧` を戻す。
+         *
+         * - **`← 一覧` は「移動」**（面なし・枠なし・`--color-link` ＋ 方向記号）。
+         *   4種類目の見た目を足さない（recipe-view design.md 6.2 の中核ルール）
+         * - **右の `編集` は出さない。** 遷移先の S-05 は Phase 5（決着2）。
+         *   **1つしか無いので段ごと消さない** — `← 一覧` があれば段は成立する
+         * - **⚠️ 確認モードでは出さない**（`UI_DESIGN.md` S-04c の差3）。
+         *   デザインHTMLのモックには描かれているが README が正。**空の段として高さも残さない**
          */}
-        <RecipeTitle recipeId={recipeId} title={title} onRenamed={setTitle} />
+        {mode === "view" && (
+          <nav aria-label="画面の移動" className="flex px-3 py-1.5">
+            <Link
+              href="/"
+              className="text-link flex h-[var(--size-tap)] items-center px-3 text-body transition-colors duration-[120ms]"
+            >
+              ← 一覧
+            </Link>
+          </nav>
+        )}
+
+        {/*
+         * 中段: タイトル 22px/700/lh1.4 ＋ `✎ 改題`。padding は仕様どおり 0 16px 8px
+         * （`RecipeTitle` 側が持つ）。上余白は**上段の padding-bottom 6px が担う**。
+         *
+         * **⚠️ 確認モードだけは上余白を自前で足す。** 確認モードには上段が無いので、
+         * 何もしないとタイトルがバナーの境界線に貼り付く。**Phase 3 が中段に足していた
+         * 12px は、いまや「上段が無いモード」だけに必要な値**になった
+         * （recipe-view design.md 6.4「上余白12px は仕様値ではない」/ 落とし穴 #17）。
+         */}
+        <div className={mode === "confirm" ? "pt-3" : undefined}>
+          <RecipeTitle recipeId={recipeId} title={title} onRenamed={setTitle} />
+        </div>
 
         {/*
          * 下段: ページ内の移動。**「移動」は面なし・枠なし・文字色 --color-link ＋ 方向記号**
