@@ -68,14 +68,29 @@
 
 ## 段階2: 材料と手順の下書きを保存形に整え、検証する関数を追加する
 
-- [ ] `lib/recipes/contents.ts` を作る: 型（`IngredientDraft` / `StepDraft` / `IngredientInput` / `RecipeContentsInput`）、`isBlankIngredient`、`toContentsInput`、`ingredientNameProblem`、`contentsProblem`、上限と文言の定数（design.md 5.1）
-- [ ] `Category` の値は `@/generated/prisma/enums` から取る（**`client` から取らない**。recipe-view 落とし穴 #27）
-- [ ] `__tests__/recipe-contents.test.ts` を足す（design.md 8章の3行分）
-- [ ] **壊して確かめる**: 空行の除去を外す／カテゴリを空判定に含める／`length` で数える → それぞれテストが落ちること
+- [x] `lib/recipes/contents.ts` を作る: 型（`IngredientDraft` / `StepDraft` / `IngredientInput` / `RecipeContentsInput`）、`isBlankIngredient`、`toContentsInput`、`ingredientNameProblem`、`contentsProblem`、上限と文言の定数（design.md 5.1）
+- [x] `Category` の値は `@/generated/prisma/enums` から取る（**`client` から取らない**。recipe-view 落とし穴 #27）
+- [x] `__tests__/recipe-contents.test.ts` を足す（design.md 8章の3行分）
+- [x] **壊して確かめる**: 空行の除去を外す／カテゴリを空判定に含める／`length` で数える → それぞれテストが落ちること
 
 **受け入れ基準**: 検証コマンドが全部0
 
 ### 実施時の記録
+
+- **テストは 503件 → 547件**（`recipe-contents.test.ts` 44件。`it.each` の展開を含む）
+- **壊して確かめた**（それぞれ確認後に戻した）:
+
+  | 壊し方                                             | 落ちた件数 |
+  | -------------------------------------------------- | ---------- |
+  | `toContentsInput` から空行の除去（`filter`）を外す | 3          |
+  | `isBlankIngredient` の判定にカテゴリを含める       | 7          |
+  | 文字数を `length` で数える                         | 2          |
+
+- **design.md 5.1 に無い関数を3つ足した**:
+  - `amountProblem` / `stepTextProblem`: 分量・手順の本文の長すぎを、材料名と同じく**欄ごとに**出せるようにするため。無いと、長すぎたときの文言が保存を押した後にサーバーから1つだけ返る形になる
+  - `isCategory`: `PUT` の body（`unknown`）を型付けするときに段階4 で使う。`contentsProblem` の中でも念のため使っている（型の上では `Category` でも、サーバーには外から来た値が届くため）
+- **欄ごとの文言（「未入力」「100文字以内」）と、サーバーが返す文言（「材料名は100文字以内で入力してください。」）を分けた。** 欄の下に出す補助文は資料の「未入力」に合わせて短くし、画面全体に出す文言は「原因」と「次にすること」が読める形にした
+- **`contentsProblem` は、空の判定では `trim()` するが、文字数は受け取った値のまま数える。** 整えるのはクライアントの責務（design.md 5.3）で、サーバーが保存するのは受け取った値そのものなので、その長さを見る
 
 ---
 

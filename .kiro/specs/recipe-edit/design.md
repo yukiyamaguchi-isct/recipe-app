@@ -373,7 +373,10 @@ export function toContentsInput(
 | 関数                           | 使う側       | 返すもの                                                                     |
 | ------------------------------ | ------------ | ---------------------------------------------------------------------------- |
 | `ingredientNameProblem(draft)` | クライアント | その行の材料名の欄に出す文言（「未入力」/ 長すぎる）か `null`                |
+| `amountProblem(draft)`         | クライアント | 分量の欄に出す文言（長すぎる）か `null`。**空は問題にしない**                |
+| `stepTextProblem(step)`        | クライアント | 手順の本文の欄に出す文言（長すぎる）か `null`。**空は問題にしない**          |
 | `contentsProblem(input)`       | サーバー     | `RecipeContentsInput` 全体の問題を1つ（`ValidationError` に載せる）か `null` |
+| `isCategory(value)`            | サーバー     | `unknown` が enum の値のどれかか（`PUT` の body の型付けに使う）             |
 
 - **どちらも例外を投げない**（`titleProblem()` と同じ。入力のたびに例外を作らない）
 - `contentsProblem` が見るもの: 件数の上限／材料名が空でない／各文字数の上限／**`category` が enum の値のどれか**／手順が空でない
