@@ -7,6 +7,13 @@ import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/recipes/category";
 import { isBlankIngredient, type IngredientDraft } from "@/lib/recipes/contents";
 
 import { ConfirmDialog } from "../../../confirm-dialog";
+import {
+  ADD_BUTTON_CLASS,
+  CARD_CLASS,
+  DANGER_SMALL_CLASS,
+  FIELD_CLASS,
+  SECTION_HEADING_CLASS,
+} from "./field-styles";
 
 /**
  * S-05「材料」の節（引き継ぎ資料 README「Screens 6」/ recipe-edit design.md 6.1・6.2）。
@@ -25,18 +32,6 @@ type Props = {
   onAdd: () => string;
   onRemove: (key: string) => void;
 };
-
-/**
- * 入力欄の見た目（README「Screens 6」の行カード: 52px / padding 12px 14px / 枠1.5px / 角丸8px。
- * focus は README「フォーム入力」: 枠 link ＋ outline 3px accent-light）。
- * **行カードの中は「Screens 6」の寸法を採る**（食い違い11。「フォーム入力」の 56px ではない）。
- */
-const FIELD =
-  "border-border-strong bg-surface text-ink min-h-13 rounded-sm border-[1.5px] px-3.5 py-3 focus:border-link focus:outline-3 focus:outline-accent-light";
-
-/** 行の削除ボタンと「＋ 行を追加」の間の見た目の約束（README「ボタン」の危険 / 破線ボタン） */
-const DANGER_SMALL =
-  "border-danger-border text-danger hover:bg-danger-soft bg-surface min-h-13 w-24 flex-none rounded-sm border-[1.5px] text-body transition-colors duration-[120ms]";
 
 /** ダイアログの本文に出す、その行の呼び名（design.md 5.8）。「材料名 分量」。空の欄は省く */
 function rowName(draft: IngredientDraft): string {
@@ -103,7 +98,7 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-3.5">
       {/* 節の見出し（design.md 6.2。資料の編集画面は材料だけなので見出しが無いが、2節になると境目が要る） */}
-      <h2 id={headingId} className="text-ink text-title font-bold">
+      <h2 id={headingId} className={SECTION_HEADING_CLASS}>
         材料
       </h2>
 
@@ -111,10 +106,7 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
         <ul className="flex flex-col gap-3.5">
           {ingredients.map((draft, index) => (
             // **key は配列の添字にしない**（落とし穴 #N4）。途中の行を消すと値が後ろの行に残って見える
-            <li
-              key={draft.key}
-              className="bg-surface border-border flex flex-col gap-2.5 rounded-md border p-3.5"
-            >
+            <li key={draft.key} className={CARD_CLASS}>
               {/* 1段目: 材料名（伸びる・最小幅0）＋ 分量（幅96px・伸縮しない） */}
               <div className="flex gap-2.5">
                 <input
@@ -124,7 +116,7 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
                   onChange={(event) => onChange(draft.key, { name: event.target.value })}
                   placeholder="材料名"
                   aria-label={`材料名（${index + 1}行目）`}
-                  className={`${FIELD} min-w-0 flex-1 text-lead`}
+                  className={`${FIELD_CLASS} min-w-0 flex-1 text-lead`}
                 />
                 <input
                   type="text"
@@ -132,7 +124,7 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
                   onChange={(event) => onChange(draft.key, { amount: event.target.value })}
                   placeholder="分量"
                   aria-label={`分量（${index + 1}行目）`}
-                  className={`${FIELD} w-24 flex-none text-lead`}
+                  className={`${FIELD_CLASS} w-24 flex-none text-lead`}
                 />
               </div>
 
@@ -144,7 +136,7 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
                     onChange(draft.key, { category: event.target.value as Category })
                   }
                   aria-label={`カテゴリ（${index + 1}行目）`}
-                  className={`${FIELD} min-w-0 flex-1 text-body`}
+                  className={`${FIELD_CLASS} min-w-0 flex-1 text-body`}
                 >
                   {/* 並びとラベルは S-04 のタブと共有（lib/recipes/category.ts。落とし穴 #N12） */}
                   {CATEGORY_ORDER.map((value) => (
@@ -157,7 +149,7 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
                   type="button"
                   onClick={() => requestRemove(draft)}
                   aria-label={`${index + 1}行目を削除`}
-                  className={DANGER_SMALL}
+                  className={DANGER_SMALL_CLASS}
                 >
                   削除
                 </button>
@@ -168,12 +160,7 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
       )}
 
       {/* 「＋ 行を追加」: 枠 1.5px dashed link / 文字 link 19px 500 / 56px / 幅100% / 角丸12px（README「Screens 6」） */}
-      <button
-        ref={addButtonRef}
-        type="button"
-        onClick={add}
-        className="border-link text-link hover:bg-primary-soft bg-surface h-[var(--size-tap-lg)] w-full rounded-md border-[1.5px] border-dashed text-lead font-medium transition-colors duration-[120ms]"
-      >
+      <button ref={addButtonRef} type="button" onClick={add} className={ADD_BUTTON_CLASS}>
         ＋ 行を追加
       </button>
 
