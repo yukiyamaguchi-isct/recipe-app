@@ -174,8 +174,13 @@
    * 確認モード（S-04c）の最下部固定バーの高さ。本文の下余白がこれを参照する。
    * **無いと最後の手順がバーに隠れる**（design.md 落とし穴 #11）。
    * 実際の高さは `confirm-bar.tsx` が測って上書きする。
+   *
+   * **Phase 5 で 96px → 160px に積み直した**（recipe-edit tasks.md 段階13）。「編集する」が増えてボタンが2つになった:
+   *   上境界 1px + padding 16px + 主要 56px + gap 10px + 副次 56px + padding 16px = 155px（✅ 実測も 155px）→ 余裕を見て 160px。
+   * **低すぎるより高すぎるほうに寄せる**（recipe-list design.md 6.5 と同じ考え方）。
+   * 低いと JS が動く前の一瞬だけ最後の手順がバーに隠れ、高すぎても下の余白が少し増えるだけ。
    */
-  --recipe-bottom-bar-h: 96px;
+  --recipe-bottom-bar-h: 160px;
 }
 
 body {

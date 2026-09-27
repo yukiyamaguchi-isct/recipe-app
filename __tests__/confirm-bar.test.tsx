@@ -41,23 +41,41 @@ describe("ConfirmBar", () => {
 });
 
 /**
- * **Phase 3 では「編集する」を出さない**（design.md 6.8）。
- *
- * 遷移先の S-05 は Phase 5 で、**ヘッダーの「編集」を Phase 5 まで出さないという
- * ユーザー決定（requirements.md 決着2）と揃える。**
+ * **Phase 5 で「編集する」を戻した**（recipe-edit 決定② / README「Screens 5」）。
+ * Phase 3 は遷移先の S-05 が無いため出していなかった（recipe-view design.md 6.8）。
  */
-describe("Phase 3 では編集の導線を出さない", () => {
-  it("「編集する」を出さない", () => {
+describe("編集の導線（Phase 5）", () => {
+  it("「編集する」を出し、編集画面（/recipes/<id>/edit）へ行ける", () => {
     render(<ConfirmBar recipeId={RECIPE_ID} />);
 
-    expect(screen.queryByRole("button", { name: /編集/ })).toBeNull();
-    expect(screen.queryByRole("link", { name: /編集/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "編集する" }).getAttribute("href")).toBe(
+      `/recipes/${RECIPE_ID}/edit`,
+    );
   });
 
-  it("ボタンは1つだけ", () => {
+  it("**並びは「この内容で決定」→「編集する」**（主要が上。README「Screens 5」）", () => {
+    const { container } = render(<ConfirmBar recipeId={RECIPE_ID} />);
+
+    const labels = [...container.querySelectorAll("button, a")].map(
+      (element) => element.textContent,
+    );
+    expect(labels).toEqual(["この内容で決定", "編集する"]);
+  });
+
+  it("「編集する」は副次の見た目（枠線を持ち、主要の面を持たない）", () => {
     render(<ConfirmBar recipeId={RECIPE_ID} />);
 
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    const className = screen.getByRole("link", { name: "編集する" }).className;
+    expect(className).toMatch(/(^|\s)border-\[1\.5px\]/);
+    expect(className).not.toMatch(/(^|\s)bg-primary(\s|$)/);
+  });
+
+  it("「編集する」を押しても「この内容で決定」の処理（replace）は走らない", () => {
+    render(<ConfirmBar recipeId={RECIPE_ID} />);
+
+    fireEvent.click(screen.getByRole("link", { name: "編集する" }));
+
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });
 

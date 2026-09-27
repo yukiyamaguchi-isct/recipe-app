@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { recipePath } from "./mode";
+import { editPath, recipePath } from "./mode";
 
 /**
  * 確認モード（S-04c）の最下部固定バー（`UI_DESIGN.md` S-04c / design.md 6.1）。
@@ -88,16 +89,20 @@ export function ConfirmBar({ recipeId }: Props) {
         </button>
 
         {/*
-         * ⚠️ デザインはここに副次ボタン「編集する」を置いているが、**Phase 3 では出さない。**
+         * 副次ボタン「編集する」（README「Screens 5」: [この内容で決定]（主要）→[編集する]（副次）の順）。
+         * **Phase 5 で戻した**（recipe-edit 決定②）。Phase 3 は遷移先の S-05 が無いため出していなかった。
          *
-         * 遷移先の S-05（編集画面）は Phase 5 で、**ヘッダーの「編集」を
-         * Phase 5 まで出さないというユーザー決定（requirements.md 決着2）と揃える。**
-         * 出して無効表示にする案も、同じ決定で明確に見送られている。
+         * 見た目は副次（面 白・枠 1.5px link・文字 link 19px 500・56px）。押すと編集画面へ移るだけなので
+         * 要素は `Link`（S-04 ヘッダーの `編集` と同じ判断。recipe-edit design.md 5.9）。
          *
-         * **読み取り間違いが皆無になるわけではない**ので、Phase 3 では
-         * ヘッダーの `✎ 改題`（Req7）でタイトルだけは直せるようにしてある。
-         * 材料・手順の修正は Phase 5。詳細は design.md 6.8。
+         * **確認モードの出口はこのバーの2つだけ**（決定②。ヘッダーの上段は出さない）
          */}
+        <Link
+          href={editPath(recipeId)}
+          className="border-link text-link hover:bg-primary-soft bg-surface flex h-[var(--size-tap-lg)] w-full items-center justify-center rounded-md border-[1.5px] text-lead font-medium transition-colors duration-[120ms]"
+        >
+          編集する
+        </Link>
       </div>
     </div>
   );
