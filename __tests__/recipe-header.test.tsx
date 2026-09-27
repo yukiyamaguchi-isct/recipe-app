@@ -30,10 +30,10 @@ describe("RecipeHeader", () => {
  * ヘッダー上段（recipe-list requirements.md Req7 で復元）。
  *
  * **Phase 3 では遷移先の S-02 が無いため段ごと描いていなかった。**
- * Phase 4 で一覧ができたので `← 一覧` を戻した。
- * `編集` は遷移先の S-05 が Phase 5 のため**まだ出さない**（決着2）。
+ * Phase 4 で一覧ができたので `← 一覧` を戻し、Phase 5 で右に `編集` を戻した（recipe-edit 決定②）。
+ * **確認モードでは上段ごと出さない**（決定②）。
  */
-describe("上段（Phase 4 で復元）", () => {
+describe("上段（Phase 4・5 で復元）", () => {
   it("通常モードでは「← 一覧」を出し、一覧へ行ける", () => {
     render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
 
@@ -51,15 +51,41 @@ describe("上段（Phase 4 で復元）", () => {
     expect(screen.queryByRole("link", { name: /一覧/ })).toBeNull();
   });
 
-  it("「編集」はどちらのモードでも出さない（S-05 は Phase 5）", () => {
-    const { unmount } = render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
-    expect(screen.queryByRole("button", { name: /編集/ })).toBeNull();
-    expect(screen.queryByRole("link", { name: /編集/ })).toBeNull();
-    unmount();
+  it("通常モードでは右に「編集」を出し、編集画面（/recipes/<id>/edit）へ行ける", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
 
+    expect(screen.getByRole("link", { name: "編集" }).getAttribute("href")).toBe(
+      `/recipes/${RECIPE_ID}/edit`,
+    );
+  });
+
+  /**
+   * ⚠️ recipe-edit 決定②。**確認モードでは `編集` も出さない**（上段ごと出さない）。
+   * モックは上段に描いているが、確認モードの出口は最下部バーの「この内容で決定」「編集する」だけ。
+   * 上段に出すと最下部の「編集する」と重複する。
+   */
+  it("確認モードでは「編集」を上段に出さない", () => {
     render(<RecipeHeader recipeId={RECIPE_ID} mode="confirm" title="肉じゃが" />);
-    expect(screen.queryByRole("button", { name: /編集/ })).toBeNull();
+
     expect(screen.queryByRole("link", { name: /編集/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^編集/ })).toBeNull();
+  });
+
+  /**
+   * `編集` は「操作」（枠線・面は白）。**「移動」（面なし・枠なし）にすると `← 一覧` と区別が付かない**
+   * （README の中核ルールの表が `編集` を「操作」の例に挙げている。落とし穴 #14）。
+   */
+  it("「編集」は枠線を持つ（「操作」の見た目）", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+
+    expect(screen.getByRole("link", { name: "編集" }).className).toMatch(/(^|\s)border-\[1\.5px\]/);
+  });
+
+  it("「編集」は「画面の移動」の nav の外に置く（移動ではなく操作）", () => {
+    render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
+
+    const nav = screen.getByRole("navigation", { name: "画面の移動" });
+    expect(within(nav).queryByRole("link", { name: "編集" })).toBeNull();
   });
 
   /**
@@ -81,11 +107,11 @@ describe("上段（Phase 4 で復元）", () => {
    * 上段が戻って3つになった。数だけだと**別の何かが増えても気づけない**ので、
    * 何が並んでいるかで見る。
    */
-  it("ヘッダーのリンクは「← 一覧」と2つの移動リンクだけ", () => {
+  it("ヘッダーのリンクは「← 一覧」「編集」と2つの移動リンクだけ", () => {
     render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
 
     const labels = screen.getAllByRole("link").map((link) => link.textContent);
-    expect(labels).toEqual(["← 一覧", "材料 ↓", "作り方 ↓"]);
+    expect(labels).toEqual(["← 一覧", "編集", "材料 ↓", "作り方 ↓"]);
   });
 
   it("確認モードでは移動リンク2つだけになる", () => {
@@ -124,8 +150,16 @@ describe("移動として組む（絞り込みと混ぜない）", () => {
   it("面（背景色）を持つクラスを当てない", () => {
     render(<RecipeHeader recipeId={RECIPE_ID} mode="view" title="肉じゃが" />);
 
-    // 絞り込みピルは bg-primary / bg-surface を持つ。移動リンクは面なし
-    for (const link of screen.getAllByRole("link")) {
+    // 絞り込みピルは bg-primary / bg-surface を持つ。移動リンクは面なし。
+    //
+    // **移動リンク（2つの nav の中）に絞る。** Phase 5 で上段に戻した `編集` もリンクだが、
+    // 見た目は「操作」で面は白（README の中核ルール）。`編集` の見た目は上の「枠線を持つ」で固定している
+    const navLinks = screen
+      .getAllByRole("navigation")
+      .flatMap((nav) => within(nav).getAllByRole("link"));
+
+    expect(navLinks.map((link) => link.textContent)).toEqual(["← 一覧", "材料 ↓", "作り方 ↓"]);
+    for (const link of navLinks) {
       expect(link.className).not.toMatch(/\bbg-/);
     }
   });

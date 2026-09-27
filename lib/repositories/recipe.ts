@@ -1,5 +1,6 @@
 import type { Ingredient, Recipe, Step } from "@/generated/prisma/client";
 import type { RecipeAnalysis } from "@/lib/clients/claude";
+import type { RecipeContentsInput } from "@/lib/recipes/contents";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -209,4 +210,72 @@ export async function deleteRecipeForUser(
   // 取得と削除の間に消えていた場合（二重送信など）はここが 0 になる。
   // 呼び出し側からは「見つからない」と同じ扱いでよい
   return result.count === 0 ? null : { imageKey: recipe.imageKey };
+}
+
+// ---- Phase 5: recipe-edit ----
+
+/**
+ * 材料と手順を丸ごと置き換える（recipe-edit design.md 5.2）。**他人のレシピは1行も変わらない。**
+ *
+ * 置き換えた件数（0 か 1）を返す。**0 なら「存在しない」か「他人のもの」**
+ * （呼び出し側は区別しない。`updateRecipeTitle` と同じ契約）。
+ *
+ * **1つの対話的トランザクションで行う。** 消したあとで入れ直しに失敗すると、
+ * 材料が全部消えたレシピが残る（落とし穴 #N2）。トランザクションなら途中の失敗で全部戻る。
+ * 配列を渡す形の `$transaction` ではなく関数を渡す形なのは、**所有が確かめられたときだけ
+ * 消して入れ直す**という途中の分岐が要るため（📄 `generated/prisma/internal/class.ts` L185）。
+ *
+ * `order` には配列の添字を入れる（`saveRecipe` と同じ規則）。削除で飛んだ番号も詰め直され、
+ * 常に 0 からの連番になる。
+ *
+ * **見分け方**: 他人の userId で呼んで 0 が返り、**他人の材料・手順が1行も変わっていない**こと。
+ */
+export async function replaceRecipeContents(
+  userId: string,
+  recipeId: string,
+  contents: RecipeContentsInput,
+): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    // ⚠️ **所有チェックはここ。** userId を where に入れた updateMany の件数で見る
+    // （recipe-view 落とし穴 #19 と同じ形）。
+    //
+    // **`deleteMany` の条件（`recipe: { userId }`）に頼らない**（落とし穴 #N1）。
+    // 消す側は守れても、`createMany` は他人の recipeId にも行を足せてしまう。
+    //
+    // updatedAt も同時に進める。材料と手順だけを入れ替えると Recipe の行は変わらず、
+    // `@updatedAt` が動かない（design.md 2章）。
+    const owned = await tx.recipe.updateMany({
+      where: { id: recipeId, userId },
+      data: { updatedAt: new Date() },
+    });
+
+    if (owned.count === 0) {
+      // 何も消さずに抜ける。**ここより下は所有が確かめられたときだけ走る**
+      return 0;
+    }
+
+    await tx.ingredient.deleteMany({ where: { recipeId } });
+    await tx.step.deleteMany({ where: { recipeId } });
+
+    // 0件のときは呼ばない。`createMany({ data: [] })` の挙動は確かめていない（落とし穴 #N11）
+    if (contents.ingredients.length > 0) {
+      await tx.ingredient.createMany({
+        data: contents.ingredients.map((ingredient, order) => ({
+          recipeId,
+          name: ingredient.name,
+          amount: ingredient.amount,
+          category: ingredient.category,
+          order,
+        })),
+      });
+    }
+
+    if (contents.steps.length > 0) {
+      await tx.step.createMany({
+        data: contents.steps.map((text, order) => ({ recipeId, text, order })),
+      });
+    }
+
+    return 1;
+  });
 }

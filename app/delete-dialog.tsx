@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { INTERNAL_ERROR, type ApiResponseBody } from "@/lib/api-response";
+
+import { ConfirmDialog } from "./confirm-dialog";
 
 /**
  * 削除の導線と確認ダイアログ（requirements.md Req5）。
@@ -14,9 +16,9 @@ import { INTERNAL_ERROR, type ApiResponseBody } from "@/lib/api-response";
  * **外側**に置く必要があり（落とし穴 #13）、開閉の state はトリガーが持つのが自然なため。
  * 分けると、カード側に state を持たせて props で渡すことになり、かえって散らかる。
  *
- * **⚠️ ネイティブ `<dialog>` は使わない。** jsdom 30 は `showModal` / `close` を
- * **実装していない**（`undefined`。呼ぶと TypeError）ため、使うとテストが全滅する。
- * ✅ 実測 2026-08-25、段階10。詳細は design.md 6.4。
+ * **ダイアログの外枠は `./confirm-dialog.tsx`**（Phase 5 で切り出した。recipe-edit design.md 3.1）。
+ * ここに残るのはトリガー・開閉と削除中の state・削除の通信・本文と失敗の表示。
+ * ネイティブ `<dialog>` を使わない理由（jsdom 30 に `showModal` が無い）もあちらに書いてある。
  */
 
 const NETWORK_MESSAGE = "通信に失敗しました。通信環境を確認して、もう一度お試しください。";
@@ -53,7 +55,6 @@ export function DeleteDialog({ recipeId, title }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
 
   async function handleDelete() {
     // ⚠️ 二重送信を防ぐ。**2回目は 404 になる**（1回目で消えているため）ので、
@@ -93,32 +94,6 @@ export function DeleteDialog({ recipeId, title }: Props) {
     setProblem(null);
   }
 
-  // ⚠️ Escape で閉じる。**ネイティブ dialog なら無料で付くが、素の div では自前。**
-  // 閉じるだけで、削除はしない（Req5「やめるでレシピが残っている」）。
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      // 削除の最中は閉じさせない。閉じても処理は止まらず、結果が見えなくなるだけ
-      if (event.key === "Escape" && !deleting) {
-        close();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, deleting]);
-
-  // 開いたら「やめる」に焦点を移す。**破壊的でないほうを初期位置にする**
-  // （資料「破壊的動作を上に置かない」と同じ考え方）。
-  useEffect(() => {
-    if (isOpen) {
-      cancelRef.current?.focus();
-    }
-  }, [isOpen]);
-
   return (
     <>
       {/*
@@ -138,67 +113,34 @@ export function DeleteDialog({ recipeId, title }: Props) {
       </button>
 
       {isOpen && (
-        <div
-          // 背景クリックで閉じる。**閉じるだけで消えない**（削除中は閉じない）
-          onClick={() => !deleting && close()}
-          className="fixed inset-0 z-50 grid place-items-center bg-[rgba(11,45,57,0.45)] p-4"
+        // 外枠（背景・Escape・背景クリック・初期フォーカス・縦並びのボタン）は ConfirmDialog。
+        // **削除中は閉じない**（busy）。閉じても処理は止まらず、結果が見えなくなるだけ
+        <ConfirmDialog
+          heading="レシピを削除"
+          cancelLabel="やめる"
+          confirmLabel="削除する"
+          busyLabel="削除中…"
+          busy={deleting}
+          onCancel={close}
+          onConfirm={handleDelete}
         >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`delete-heading-${recipeId}`}
-            // 中身のクリックで閉じない
-            onClick={(event) => event.stopPropagation()}
-            className="bg-surface shadow-e2 flex w-full max-w-[340px] flex-col gap-3 rounded-md p-6"
-          >
-            <h2 id={`delete-heading-${recipeId}`} className="text-ink text-title font-bold">
-              レシピを削除
-            </h2>
+          {/* **どれを消すのか出す。** 「本当に削除しますか」だけでは確認にならない */}
+          <p className="text-ink-control text-body">「{title}」を削除します。元に戻せません。</p>
 
-            {/* **どれを消すのか出す。** 「本当に削除しますか」だけでは確認にならない */}
-            <p className="text-ink-control text-body">「{title}」を削除します。元に戻せません。</p>
-
-            {/*
-             * 失敗したときだけ出す。**ダイアログは閉じない**ので、そのまま再試行できる。
-             * 文言はサーバーのものをそのまま使う（`messageFromResponse`）。
-             * 資料「エラー表示（軽微）」に寄せた見た目。
-             */}
-            {problem !== null && (
-              <p
-                role="alert"
-                className="bg-danger-soft border-danger-border text-danger-body rounded-sm border px-4 py-3 text-body"
-              >
-                {problem}
-              </p>
-            )}
-
-            {/*
-             * ボタンは縦並び（gap 10px、各56px）。
-             * **⚠️ 破壊的動作を上に置かない**（引き継ぎ資料「確認ダイアログ」）。
-             * 「やめる」が上、「削除する」が下。
-             */}
-            <div className="mt-1 flex flex-col gap-2.5">
-              <button
-                ref={cancelRef}
-                type="button"
-                onClick={close}
-                disabled={deleting}
-                className="border-link text-link hover:bg-primary-soft bg-surface flex h-[var(--size-tap-lg)] items-center justify-center rounded-md border-[1.5px] text-lead font-medium transition-colors duration-[120ms]"
-              >
-                やめる
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="border-danger-border text-danger hover:bg-danger-soft bg-surface flex h-[var(--size-tap-lg)] items-center justify-center rounded-md border-[1.5px] text-lead font-medium transition-colors duration-[120ms] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {deleting ? "削除中…" : "削除する"}
-              </button>
-            </div>
-          </div>
-        </div>
+          {/*
+           * 失敗したときだけ出す。**ダイアログは閉じない**ので、そのまま再試行できる。
+           * 文言はサーバーのものをそのまま使う（`messageFromResponse`）。
+           * 資料「エラー表示（軽微）」に寄せた見た目。
+           */}
+          {problem !== null && (
+            <p
+              role="alert"
+              className="bg-danger-soft border-danger-border text-danger-body rounded-sm border px-4 py-3 text-body"
+            >
+              {problem}
+            </p>
+          )}
+        </ConfirmDialog>
       )}
     </>
   );

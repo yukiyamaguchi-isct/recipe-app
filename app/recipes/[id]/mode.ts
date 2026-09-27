@@ -34,3 +34,14 @@ export function recipePath(recipeId: string): string {
 export function confirmPath(recipeId: string): string {
   return `${recipePath(recipeId)}?${CONFIRM_PARAM}=1`;
 }
+
+/**
+ * 編集画面（S-05）のパス（recipe-edit design.md 4.3）。
+ *
+ * **別ルートにした。** 確認モードは「同じ表示の状態違い」なのでクエリにしたが、
+ * S-05 はヘッダーも本文も別物（`REQUIREMENTS.md` 4.7「編集画面と表示画面は別画面」）。
+ * S-04 の `編集`・確認バーの「編集する」がここを通す。**パスを各所に直書きしない。**
+ */
+export function editPath(recipeId: string): string {
+  return `${recipePath(recipeId)}/edit`;
+}
