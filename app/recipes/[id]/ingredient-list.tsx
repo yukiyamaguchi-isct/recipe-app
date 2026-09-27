@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Category } from "@/generated/prisma/enums";
 // 型は `import type` なのでコンパイル時に消える。ランタイムには残らない。
 import type { Ingredient } from "@/generated/prisma/client";
+import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/recipes/category";
 
 /**
  * 「材料」セクション（`UI_DESIGN.md` S-04）。
@@ -23,29 +24,26 @@ import type { Ingredient } from "@/generated/prisma/client";
  */
 
 /**
- * **画面での並び順。`Object.values(Category)` を使わない**（design.md 落とし穴 #6）。
+ * カテゴリ見出しの面と文字の色（`--color-cat-*`）。**S-04 だけの見た目なのでここに置く。**
  *
- * `schema.prisma` の enum は `SEASONING / VEGETABLE / OTHER` の順だが、
- * 画面は **野菜 → 調味料 → その他**（`UI_DESIGN.md` S-04）。**両者は一致していない。**
- * enum の順に依存すると、スキーマを触った瞬間に画面の並びが変わり、
- * しかも**型でもテストでも捕まらない**。
+ * `Record<Category, …>` なので、カテゴリを増やして足し忘れると型エラーになる。
+ * **クラス名は文字列のまま書く**（Tailwind は組み立てたクラス名を拾えない）。
  */
-const CATEGORY_VIEW = [
-  { value: Category.VEGETABLE, label: "野菜", band: "bg-cat-veg text-cat-veg-ink" },
-  { value: Category.SEASONING, label: "調味料", band: "bg-cat-season text-cat-season-ink" },
-  { value: Category.OTHER, label: "その他", band: "bg-cat-other text-cat-other-ink" },
-] as const;
+const BAND: Record<Category, string> = {
+  [Category.VEGETABLE]: "bg-cat-veg text-cat-veg-ink",
+  [Category.SEASONING]: "bg-cat-season text-cat-season-ink",
+  [Category.OTHER]: "bg-cat-other text-cat-other-ink",
+};
 
 /**
- * カテゴリを増やしたときに、この配列への追加を忘れると**ここで型エラーになる**。
- * 忘れたまま動くと、その材料が画面から静かに消える。
+ * **並び順とラベルは `lib/recipes/category.ts` が正**（S-05 のプルダウンと共有。recipe-edit design.md 3.1）。
+ * `Object.values(Category)` を使わない理由（enum の順と画面の順が違う。落とし穴 #6）もあちらに書いてある。
  */
-const _EXHAUSTIVE: Record<Category, true> = {
-  [Category.VEGETABLE]: true,
-  [Category.SEASONING]: true,
-  [Category.OTHER]: true,
-};
-void _EXHAUSTIVE;
+const CATEGORY_VIEW = CATEGORY_ORDER.map((value) => ({
+  value,
+  label: CATEGORY_LABELS[value],
+  band: BAND[value],
+}));
 
 /** 絞り込みの選択肢。**並び順は `CATEGORY_VIEW` から作る**（順序の正を1箇所に保つ）。 */
 const ALL = "ALL" as const;

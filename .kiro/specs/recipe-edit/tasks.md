@@ -210,12 +210,17 @@
 
 ## 段階7: カテゴリの表示順とラベルを `lib/recipes/category.ts` に切り出す
 
-- [ ] `refactor:`。`ingredient-list.tsx` の並びとラベルを移す。**色のクラスは S-04 側に残す**（design.md 3.1）
-- [ ] 既存の `ingredient-list.test.tsx`（タブの並び）が変更なしで通ること
+- [x] `refactor:`。`ingredient-list.tsx` の並びとラベルを移す。**色のクラスは S-04 側に残す**（design.md 3.1）
+- [x] 既存の `ingredient-list.test.tsx`（タブの並び）が変更なしで通ること
 
 **受け入れ基準**: 検証コマンドが全部0
 
 ### 実施時の記録
+
+- **テストは 607件 → 609件**（`recipe-category.test.ts` 2件）。**`ingredient-list.test.tsx` は1行も変えずに通った**（`git diff -- __tests__/` が空）
+- **enum の網羅は型で担保する形を変えた。** 元は `ingredient-list.tsx` に `Record<Category, true>` のダミー（`_EXHAUSTIVE`）を置いていたが、**並び順の配列に足し忘れても捕まらない**（ダミーのほうを足せば通る）形だった。`category.ts` では **`Exclude<Category, 並び順の要素>` が `never` でなければ型エラー**にした。色（`BAND`）とラベル（`CATEGORY_LABELS`）は `Record<Category, …>` なので、どちらも足し忘れが型エラーになる
+- **壊して確かめた**（それぞれ確認後にバックアップから戻した）: 並びを enum の順にする → 4件落ちる（新しいテスト1件と `ingredient-list.test.tsx` の3件）／「その他」を並びから落とす → **`tsc` が `Type 'true' is not assignable to type 'never'` で落ちる**
+- **色のクラスは `ingredient-list.tsx` の `BAND` に文字列のまま残した**（Tailwind は組み立てたクラス名を拾えない）。**✅ Browser pane で S-04 を開き、カテゴリ見出しの面と文字の色が3つとも効いていること・タブが「全体 / 野菜 / 調味料 / その他」の順であることを確認した**（2026-09-27）
 
 ---
 
