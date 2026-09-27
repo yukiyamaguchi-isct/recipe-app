@@ -121,13 +121,28 @@
 
 ## 段階4: `PUT /api/recipes/[id]` で材料と手順を保存できるようにする
 
-- [ ] `app/api/recipes/[id]/route.ts` に `PUT` と `readContents()` を足す（design.md 5.3）
-- [ ] 新しいエラーコードは足さない（7.2）
-- [ ] `__tests__/recipe-put-route.test.ts`（**`// @vitest-environment node`**）: 401 / 400（JSON でない・形が違う・規則違反）/ 404 / 200、body の `userId` を見ないこと
+- [x] `app/api/recipes/[id]/route.ts` に `PUT` と `readContents()` を足す（design.md 5.3）
+- [x] 新しいエラーコードは足さない（7.2）
+- [x] `__tests__/recipe-put-route.test.ts`（**`// @vitest-environment node`**）: 401 / 400（JSON でない・形が違う・規則違反）/ 404 / 200、body の `userId` を見ないこと
 
 **受け入れ基準**: 検証コマンドが全部0
 
 ### 実施時の記録
+
+- **テストは 558件 → 582件**（`recipe-put-route.test.ts` 24件。「形が違う」の `it.each` 12件を含む）
+- **壊して確かめた**（それぞれ確認後に戻した）:
+
+  | 壊し方                                                     | 落ちた件数 |
+  | ---------------------------------------------------------- | ---------- |
+  | 受け取った材料のオブジェクトをそのまま使う（詰め直さない） | 1          |
+  | `contentsProblem()` を呼ばない                             | 3          |
+  | Repository が 0 を返しても 404 にしない                    | 1          |
+
+- **材料は3列だけを新しいオブジェクトに詰め直してから Repository に渡す**（`readIngredient`）。段階3 の「列を1つずつ書く」と二重の手当てになるが、**Route Handler の層で「受け取った形のまま下に流さない」ことを担保する**ため
+- **enum に無いカテゴリは「形が違う」（固定文言）にした。** `contentsProblem` の `INVALID_CATEGORY_MESSAGE` は、この経路では届かない**念のための防御**として残っている。画面の操作では enum の値しか送れないので、届くのは手で組んだリクエストだけ
+- **分量のキーが無い（`undefined`）ものは受けない。** 「無い」は `null` で送る形に1つに決めた。クライアントは `toContentsInput()` が必ず `null` を入れる
+- **既存の `recipe-patch-route.test.ts` / `recipe-delete-route.test.ts` は変更なしで通った。** どちらも `@/lib/repositories/recipe` のモックに `replaceRecipeContents` を持たないが、モックの export は**触ったときに**だけ検査されるため、`PUT` を呼ばないテストには影響しない
+- **Repository をモックしているので、このテストは所有チェックを担保しない**（design.md 8章）。担保は段階3 の偽の DB
 
 ---
 
