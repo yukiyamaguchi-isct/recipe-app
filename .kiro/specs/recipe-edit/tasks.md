@@ -148,15 +148,33 @@
 
 ## 段階5: `/recipes/[id]/edit` を開けるようにする（認可・取得・見つからない場合）
 
-- [ ] `mode.ts` に `editPath()` を足す
-- [ ] `app/recipes/[id]/edit/page.tsx`（design.md 5.4）と、ヘッダーだけの `recipe-editor.tsx` / `edit-header.tsx` を作る。`← 中止` は変更の判定なしで S-04 へ `replace`、「保存」はまだ何もしない
-- [ ] **`npx next typegen` を回してから `npx tsc --noEmit`**（recipe-view 落とし穴 #25）
-- [ ] テスト: 未ログインで `/login`、存在しないIDで `notFound()`、見出しが「レシピを編集」
-- [ ] **ブラウザで確認（ユーザー操作）**: 開けること、ヘッダーの見た目と固定、存在しないIDで親の「レシピが見つかりません」が出ること（design.md 1.2 の ⚠️）
+- [x] `mode.ts` に `editPath()` を足す
+- [x] `app/recipes/[id]/edit/page.tsx`（design.md 5.4）と、ヘッダーだけの `recipe-editor.tsx` / `edit-header.tsx` を作る。`← 中止` は変更の判定なしで S-04 へ `replace`、「保存」はまだ何もしない
+- [x] **`npx next typegen` を回してから `npx tsc --noEmit`**（recipe-view 落とし穴 #25）
+- [x] テスト: 未ログインで `/login`、存在しないIDで `notFound()`、見出しが「レシピを編集」
+- [x] **ブラウザで確認（ユーザー操作）**: 開けること、ヘッダーの見た目と固定、存在しないIDで親の「レシピが見つかりません」が出ること（design.md 1.2 の ⚠️）
 
 **受け入れ基準**: 検証コマンドが全部0。ブラウザで開ける
 
 ### 実施時の記録
+
+- **テストは 582件 → 595件**（`recipe-edit-page.test.tsx` 5件、`recipe-editor.test.tsx` 8件）
+- **落とし穴 #25 を予想どおり踏んだ。** ページを作った直後の `npx tsc --noEmit` は `Type '"/recipes/[id]/edit"' does not satisfy the constraint 'AppRoutes'` で落ち、`npx next typegen` の後は通った（`.next/types/routes.d.ts` の `AppRoutes` に `"/recipes/[id]/edit"` が増える）
+- **壊して確かめた**（それぞれ確認後に戻した）: Editor に `Date` を混ぜて渡す → 2件落ちる／`← 中止` を `push` にする → 1件落ちる
+- **⚠️ 作業中に `git checkout -- .` を誤って実行し、未コミットだった `mode.ts` の `editPath()` の追加を消した。** 壊して確かめた後の後始末のつもりだった。その時点で変更していた追跡中のファイルは `mode.ts` だけで（新規ファイルは未追跡なので影響なし）、同じ内容を足し直し、`editPath` のテストを追加した。**後始末はバックアップからの `cp` だけで行い、`git checkout` を使わない**
+- **「保存中」の見た目は既存のトークンで足りた。** README「ボタン」の「無効」（面 `#DFF1F3` / 文字 `#8AA3AB`）は `--color-track` / `--color-muted` として `app/globals.css` にある（design.md 6.1 の「未確認」を解消）
+- **Editor の props の型（`EditorIngredient` / `EditorStep`）は `recipe-editor.tsx` に置いた。** Server Component が渡すプレーンな形で、下書きの型（`IngredientDraft`）とは別物（分量が `null` か空文字か）
+- **ポート3000 には、このセッションの開始前（2026-09-26 17:56）から `next dev` が動いていた**（このリポジトリの `next dev`。ブランチを切り替える前に起動したもの）。`HANDOVER.md` 7.2「pull の後は開発サーバーを再起動する」に従い、ユーザーに再起動を依頼した
+- **✅ ブラウザで確認した（2026-09-27、ユーザー操作。ローカル）**:
+
+  | 確認                                  | 結果                                                                                              |
+  | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+  | `/recipes/<実在するID>/edit` を開く   | ✅ 左 `← 中止`・中央「レシピを編集」・右「保存」が1行。面は薄い水色、下に境界線                   |
+  | `← 中止` を押す                       | ✅ `/recipes/<id>`（クエリなし）へ移る。「戻る」で編集画面に戻らない（`replace`）                 |
+  | `/recipes/does-not-exist/edit` を開く | ✅ 親の「レシピが見つかりません」＋一覧へのボタン。内部情報は出ない（design.md 1.2 の ⚠️ を解消） |
+  - **ヘッダーの固定（sticky）はまだ確かめていない。** 本文が空でスクロールできないため。**段階8（材料の行カードが並んだ後）で確かめる**
+
+- 開発サーバーのログに `pg` の `SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'` が出る。**今回の変更とは無関係**（`DATABASE_URL` の `sslmode` についての将来の予告）。Phase 5 の範囲外として触らない
 
 ---
 
