@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { Category } from "@/generated/prisma/enums";
 import { INTERNAL_ERROR, type ApiResponseBody } from "@/lib/api-response";
@@ -15,6 +15,7 @@ import {
   type StepDraft,
 } from "@/lib/recipes/contents";
 
+import { ConfirmDialog } from "../../../confirm-dialog";
 import { recipePath } from "../mode";
 import { EditHeader } from "./edit-header";
 import { ingredientAmountId, ingredientNameId, stepTextId } from "./field-ids";
@@ -26,7 +27,7 @@ import { StepFields, type StepErrors } from "./step-fields";
  *
  * 下書きの state・保存・離脱ガードをここに集める。ヘッダーと各節は描くだけ。
  *
- * 材料（段階8）・手順（段階9）・保存（段階10）まで。離脱ガード（段階11）を足す（tasks.md）。
+ * 材料（段階8）・手順（段階9）・保存（段階10）・離脱ガード（段階11）。
  */
 
 /** Server Component から受け取る材料。**プレーンな値だけ**（`Date` を含めない） */
@@ -132,6 +133,50 @@ export function RecipeEditor({
   );
 
   /**
+   * 開いた時点の**保存形**（design.md 5.5）。「変更があるか」はこれと比べる。
+   *
+   * **下書き同士ではなく保存形で比べる**（落とし穴 #N5）。空の行を足しただけ・前後に空白を
+   * 足しただけは、保存しても DB が変わらないので「変更」に数えない。
+   * 比べ方を「保存したら何が書かれるか」に揃えると、定義が1つで済む。
+   */
+  const [initialContents] = useState(() =>
+    JSON.stringify(
+      toContentsInput(
+        toIngredientDrafts(initialIngredients),
+        initialSteps.map(({ id, text }) => ({ key: id, text })),
+      ),
+    ),
+  );
+
+  const dirty = JSON.stringify(toContentsInput(ingredients, steps)) !== initialContents;
+
+  /** 破棄確認のダイアログを開いているか */
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+
+  /**
+   * 再読み込み・タブを閉じる・URL の直打ちを止める（決定③ / design.md 1.3・5.7）。
+   *
+   * **変更があるときだけ登録する**（落とし穴 #N7）。常に登録すると、何も変えていないのに
+   * 再読み込みで確認が出る。`dirty` が戻れば外れる。
+   *
+   * `returnValue` に文言を入れない（非推奨。ブラウザは独自の文言を出す。落とし穴 #N8）。
+   * 形は `app/upload/use-analysis.ts` の前例と同じ。
+   *
+   * ⚠️ **ブラウザの「戻る」は止めない**（決定③。Next.js 16 に止める API が無い。design.md 1.3）。
+   * `router.replace` などのアプリ内の遷移では `beforeunload` は発火しない。
+   */
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  /**
    * 追加した行の key の連番（`new-1`, `new-2`, …）。
    * **配列の添字を key にしない**（落とし穴 #N4）。DB の id（cuid）とは形が違うので衝突しない。
    */
@@ -181,13 +226,26 @@ export function RecipeEditor({
   }
 
   /**
-   * `← 中止`。**段階5 では変更の有無を見ずに戻る。** 破棄確認は段階11。
+   * S-04 通常モードへ戻る。**何も保存しない。**
    *
    * `replace` にする（design.md 4.2）。`push` にすると「戻る」で編集画面に戻ってくる（落とし穴 #N10）。
    * `router.back()` は URL 直打ちで開いたときに履歴が無く、アプリの外へ出る（落とし穴 #N9）。
    */
-  function cancel() {
+  function leave() {
     router.replace(recipePath(recipeId));
+  }
+
+  /**
+   * `← 中止`（決定③ / design.md 5.7）。
+   *
+   * **変更があれば破棄確認を挟む。** 無ければそのまま戻る（押して何も起きないように見せない）。
+   */
+  function cancel() {
+    if (dirty) {
+      setConfirmingDiscard(true);
+    } else {
+      leave();
+    }
   }
 
   /** 保存中（ボタンを「保存中…」にして押せなくする。二重送信の1層目） */
@@ -289,6 +347,20 @@ export function RecipeEditor({
           onRemove={removeStep}
         />
       </main>
+
+      {confirmingDiscard && (
+        // 上が「編集を続ける」（非破壊）、下が「破棄する」。**破壊的動作を上に置かない**
+        // （README「確認ダイアログ」）。開いた直後の焦点も「編集を続ける」
+        <ConfirmDialog
+          heading="編集を破棄"
+          cancelLabel="編集を続ける"
+          confirmLabel="破棄する"
+          onCancel={() => setConfirmingDiscard(false)}
+          onConfirm={leave}
+        >
+          <p className="text-ink-control text-body">保存していない変更は失われます。</p>
+        </ConfirmDialog>
+      )}
     </>
   );
 }
