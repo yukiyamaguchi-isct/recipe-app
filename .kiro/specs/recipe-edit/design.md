@@ -436,7 +436,14 @@ export async function replaceRecipeContents(
     // 0件のときは呼ばない（design.md 1.1 の ⚠️）
     if (contents.ingredients.length > 0) {
       await tx.ingredient.createMany({
-        data: contents.ingredients.map((ingredient, order) => ({ recipeId, ...ingredient, order })),
+        // 列は1つずつ書く（スプレッドにすると実行時に混ざった余計なキーまで通る）
+        data: contents.ingredients.map(({ name, amount, category }, order) => ({
+          recipeId,
+          name,
+          amount,
+          category,
+          order,
+        })),
       });
     }
 
