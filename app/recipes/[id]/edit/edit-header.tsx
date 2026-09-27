@@ -16,9 +16,14 @@ type Props = {
   onSave: () => void;
   /** 保存中。「保存」を押せなくし、ラベルを「保存中…」にする（二重送信の1層目） */
   saving: boolean;
+  /**
+   * 保存の失敗の文言。**ヘッダーの中（固定される側）に出す**（design.md 5.6）。
+   * 本文の先頭に置くと、下までスクロールして保存したときに見えない。
+   */
+  problem?: string | null;
 };
 
-export function EditHeader({ onCancel, onSave, saving }: Props) {
+export function EditHeader({ onCancel, onSave, saving, problem = null }: Props) {
   return (
     <header className="bg-header border-border sticky top-0 z-10 border-b">
       {/* 本文と同じ幅で中央寄せ。ヘッダーだけ端まで広がると位置が揃わない */}
@@ -58,6 +63,21 @@ export function EditHeader({ onCancel, onSave, saving }: Props) {
           {saving ? "保存中…" : "保存"}
         </button>
       </div>
+
+      {/*
+       * 失敗の表示。資料「エラー表示（軽微）」に寄せた見た目（`delete-dialog.tsx` の失敗表示と同じ）。
+       * `role="alert"` で読み上げにも伝える。文言はサーバーのもの（クライアントで作らない）
+       */}
+      {problem !== null && (
+        <div className="mx-auto w-full max-w-[640px] px-4 pb-3">
+          <p
+            role="alert"
+            className="bg-danger-soft border-danger-border text-danger-body rounded-sm border px-4 py-3 text-body"
+          >
+            {problem}
+          </p>
+        </div>
+      )}
     </header>
   );
 }

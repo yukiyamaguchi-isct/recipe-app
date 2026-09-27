@@ -1,26 +1,32 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import type { Category } from "@/generated/prisma/enums";
+import { INTERNAL_ERROR, type ApiResponseBody } from "@/lib/api-response";
 import {
   NEW_INGREDIENT_CATEGORY,
+  amountProblem,
+  ingredientNameProblem,
+  stepTextProblem,
+  toContentsInput,
   type IngredientDraft,
   type StepDraft,
 } from "@/lib/recipes/contents";
 
 import { recipePath } from "../mode";
 import { EditHeader } from "./edit-header";
-import { IngredientFields } from "./ingredient-fields";
-import { StepFields } from "./step-fields";
+import { ingredientAmountId, ingredientNameId, stepTextId } from "./field-ids";
+import { IngredientFields, type IngredientErrors } from "./ingredient-fields";
+import { StepFields, type StepErrors } from "./step-fields";
 
 /**
  * S-05 の本体（recipe-edit design.md 5.5〜5.7）。**Client Component。**
  *
  * 下書きの state・保存・離脱ガードをここに集める。ヘッダーと各節は描くだけ。
  *
- * 材料（段階8）・手順（段階9）まで。保存（段階10）・離脱ガード（段階11）を順に足す（tasks.md）。
+ * 材料（段階8）・手順（段階9）・保存（段階10）まで。離脱ガード（段階11）を足す（tasks.md）。
  */
 
 /** Server Component から受け取る材料。**プレーンな値だけ**（`Date` を含めない） */
@@ -54,12 +60,70 @@ function toIngredientDrafts(ingredients: EditorIngredient[]): IngredientDraft[] 
   }));
 }
 
+/** 通信そのものの失敗（オフライン等）。**原因を断定しない**（`delete-dialog.tsx` と同じ文言） */
+const NETWORK_MESSAGE = "通信に失敗しました。通信環境を確認して、もう一度お試しください。";
+
+/**
+ * 失敗レスポンスから画面に出す文言を取り出す。
+ *
+ * **JSONですら無い場合がある**（プロキシのエラーページなど）。そのときは `INTERNAL_ERROR` の
+ * 文言に倒す。**クライアントで独自の文言を作らない**（`delete-dialog.tsx` / `recipe-title.tsx` と同じ流儀）。
+ */
+function messageFromResponse(text: string): string {
+  try {
+    const body = JSON.parse(text) as ApiResponseBody<unknown>;
+    if (body.success === false && typeof body.error?.message === "string") {
+      return body.error.message;
+    }
+  } catch {
+    // JSON でなければ既定の文言に倒す
+  }
+  return INTERNAL_ERROR.message;
+}
+
+/**
+ * 欄ごとのエラーと、最初に問題のある欄の id（design.md 5.6）。
+ *
+ * 規則は `lib/recipes/contents.ts`（サーバーの検証と同じモジュール）。**文言をここで作らない。**
+ * 「最初」は画面の上から: 材料の行（材料名 → 分量）→ 手順。
+ */
+function fieldErrors(ingredients: IngredientDraft[], steps: StepDraft[], idPrefix: string) {
+  const ingredientErrors: IngredientErrors = {};
+  const stepErrors: StepErrors = {};
+  let firstInvalidId: string | null = null;
+
+  for (const draft of ingredients) {
+    const name = ingredientNameProblem(draft);
+    const amount = amountProblem(draft);
+    ingredientErrors[draft.key] = { name, amount };
+
+    if (firstInvalidId === null && name !== null) {
+      firstInvalidId = ingredientNameId(idPrefix, draft.key);
+    }
+    if (firstInvalidId === null && amount !== null) {
+      firstInvalidId = ingredientAmountId(idPrefix, draft.key);
+    }
+  }
+
+  for (const step of steps) {
+    const problem = stepTextProblem(step);
+    stepErrors[step.key] = problem;
+
+    if (firstInvalidId === null && problem !== null) {
+      firstInvalidId = stepTextId(idPrefix, step.key);
+    }
+  }
+
+  return { ingredientErrors, stepErrors, firstInvalidId };
+}
+
 export function RecipeEditor({
   recipeId,
   ingredients: initialIngredients,
   steps: initialSteps,
 }: Props) {
   const router = useRouter();
+  const idPrefix = useId();
 
   // **初期値は props から一度だけ作る。** 以降はこの state が正（design.md 5.5）
   const [ingredients, setIngredients] = useState(() => toIngredientDrafts(initialIngredients));
@@ -126,12 +190,81 @@ export function RecipeEditor({
     router.replace(recipePath(recipeId));
   }
 
-  /** 「保存」。**段階10 で実装する。** それまでは何もしない */
-  function save() {}
+  /** 保存中（ボタンを「保存中…」にして押せなくする。二重送信の1層目） */
+  const [saving, setSaving] = useState(false);
+
+  /**
+   * 二重送信の2層目（recipe-list 落とし穴 #31 と同じ多重防御）。
+   *
+   * **state ではなく ref でも持つ。** state の更新は次の描画まで反映されないので、
+   * 同じ瞬間に2回押されると、どちらのハンドラも `saving === false` を見てしまう。
+   */
+  const savingRef = useRef(false);
+
+  /** 保存の失敗の文言（サーバーのもの / 通信の失敗）。**ヘッダーの中に出す** */
+  const [problem, setProblem] = useState<string | null>(null);
+
+  /**
+   * 欄ごとのエラーを出すか。**一度「保存」を押してから**（design.md 5.5）。
+   * 入力中から「未入力」を出すと、行を追加した直後から赤くなる。一度押したら以降は打つたびに出し直す。
+   */
+  const [showErrors, setShowErrors] = useState(false);
+
+  const errors = fieldErrors(ingredients, steps, idPrefix);
+
+  /**
+   * 「保存」（design.md 5.6）。
+   *
+   * 1. 二重送信を止める
+   * 2. 欄ごとの検証。問題があれば**送らず**、最初の欄へフォーカス
+   * 3. `toContentsInput()` で整えて `PUT`（空の行はここで捨てられる。4.4）
+   * 4. 成功 → S-04 通常モードへ `replace`（4.2）。失敗 → 画面に留まり、**下書きを消さない**
+   */
+  async function save() {
+    if (savingRef.current) {
+      return;
+    }
+
+    setShowErrors(true);
+
+    if (errors.firstInvalidId !== null) {
+      // 入力欄は scroll-margin-top を持っているので、固定ヘッダーの下に潜らずに見える（field-styles.ts）
+      document.getElementById(errors.firstInvalidId)?.focus();
+      return;
+    }
+
+    savingRef.current = true;
+    setSaving(true);
+    setProblem(null);
+
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toContentsInput(ingredients, steps)),
+      });
+
+      if (response.ok) {
+        // **replace。** 「戻る」で古い内容の編集画面に戻ってこない（落とし穴 #N10）。
+        // 遷移が終わるまで「保存中…」のまま押せないようにしておく（保存中の state は戻さない）
+        router.replace(recipePath(recipeId));
+        return;
+      }
+
+      setProblem(messageFromResponse(await response.text()));
+    } catch {
+      // fetch が投げるのは通信そのものの失敗（オフライン等）。**原因を断定しない**
+      setProblem(NETWORK_MESSAGE);
+    }
+
+    // ここに来るのは失敗したときだけ。**下書きはそのまま**なので、直してもう一度押せる
+    savingRef.current = false;
+    setSaving(false);
+  }
 
   return (
     <>
-      <EditHeader onCancel={cancel} onSave={save} saving={false} />
+      <EditHeader onCancel={cancel} onSave={save} saving={saving} problem={problem} />
 
       {/*
        * レスポンシブ: 単一カラムのまま max-width 640px で中央寄せ（引き継ぎ資料 Interactions）。
@@ -139,13 +272,22 @@ export function RecipeEditor({
        */}
       <main className="mx-auto flex w-full max-w-[640px] flex-col gap-3.5 p-4">
         <IngredientFields
+          idPrefix={idPrefix}
           ingredients={ingredients}
+          errors={showErrors ? errors.ingredientErrors : {}}
           onChange={changeIngredient}
           onAdd={addIngredient}
           onRemove={removeIngredient}
         />
         {/* 材料の節の**下**に「作り方」の節（決定①） */}
-        <StepFields steps={steps} onChange={changeStep} onAdd={addStep} onRemove={removeStep} />
+        <StepFields
+          idPrefix={idPrefix}
+          steps={steps}
+          errors={showErrors ? errors.stepErrors : {}}
+          onChange={changeStep}
+          onAdd={addStep}
+          onRemove={removeStep}
+        />
       </main>
     </>
   );

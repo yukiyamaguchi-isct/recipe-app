@@ -13,9 +13,20 @@
  * focus は README「フォーム入力」: 枠 link ＋ outline 3px accent-light）。
  * **行カードの中は「Screens 6」の寸法を採る**（食い違い11。「フォーム入力」の 56px ではない）。
  * 文字の大きさは呼び出し側で足す（入力欄 19px / select 17px）。
+ *
+ * **`scroll-margin-top` を持たせる。** 保存時に「未入力」の欄へフォーカスを移すと、ブラウザは
+ * その欄が見えるところまでスクロールするが、**余白が無いと欄が固定ヘッダー（約61px）の下に潜る**
+ * （design.md 5.6 の ⚠️。段階9 で見出しが潜るのを実際に見た）。ヘッダー＋失敗の表示の分を見込んで 128px。
+ *
+ * **エラー時は枠を赤にする**（README「フォーム入力」: 枠 `#B3261E`）。枠の色のクラスを
+ * 2つ同時に付けると、どちらが勝つかが CSS の出力順で決まってしまうので、**どちらか1つだけ**付ける。
  */
-export const FIELD_CLASS =
-  "border-border-strong bg-surface text-ink min-h-13 rounded-sm border-[1.5px] px-3.5 py-3 focus:border-link focus:outline-3 focus:outline-accent-light";
+export function fieldClass(invalid: boolean): string {
+  return `${invalid ? "border-danger" : "border-border-strong"} bg-surface text-ink min-h-13 scroll-mt-32 rounded-sm border-[1.5px] px-3.5 py-3 focus:border-link focus:outline-3 focus:outline-accent-light`;
+}
+
+/** 欄の下に出す補助文（README「フォーム入力」: 15px `#B3261E`） */
+export const FIELD_ERROR_CLASS = "text-danger text-meta";
 
 /** 行カード（面 白 / 枠 1px / 角丸 12px / padding 14px / 縦 gap 10px） */
 export const CARD_CLASS = "bg-surface border-border flex flex-col gap-2.5 rounded-md border p-3.5";

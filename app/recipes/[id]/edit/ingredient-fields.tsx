@@ -11,9 +11,11 @@ import {
   ADD_BUTTON_CLASS,
   CARD_CLASS,
   DANGER_SMALL_CLASS,
-  FIELD_CLASS,
+  FIELD_ERROR_CLASS,
   SECTION_HEADING_CLASS,
+  fieldClass,
 } from "./field-styles";
+import { errorId, ingredientAmountId, ingredientNameId } from "./field-ids";
 
 /**
  * S-05「材料」の節（引き継ぎ資料 README「Screens 6」/ recipe-edit design.md 6.1・6.2）。
@@ -25,8 +27,14 @@ import {
  * ここが持つのは**画面だけの状態**（削除の確認中の行・追加直後のフォーカス先）。
  */
 
+/** 行ごとの欄のエラー（`null` なら問題なし）。**保存を押すまでは渡さない**（design.md 5.5） */
+export type IngredientErrors = Record<string, { name: string | null; amount: string | null }>;
+
 type Props = {
+  /** 欄の id の頭。`RecipeEditor` の `useId()`（保存時にフォーカスを移すのに使う。field-ids.ts） */
+  idPrefix: string;
   ingredients: IngredientDraft[];
+  errors: IngredientErrors;
   onChange: (key: string, patch: Partial<Omit<IngredientDraft, "key">>) => void;
   /** 末尾に空の行を足し、その `key` を返す（フォーカスを移すのに使う） */
   onAdd: () => string;
@@ -38,10 +46,17 @@ function rowName(draft: IngredientDraft): string {
   return [draft.name.trim(), draft.amount.trim()].filter((part) => part !== "").join(" ");
 }
 
-export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Props) {
+export function IngredientFields({
+  idPrefix: fieldPrefix,
+  ingredients,
+  errors,
+  onChange,
+  onAdd,
+  onRemove,
+}: Props) {
   const idPrefix = useId();
   const headingId = `${idPrefix}-heading`;
-  const nameId = (key: string) => `${idPrefix}-name-${key}`;
+  const nameId = (key: string) => ingredientNameId(fieldPrefix, key);
 
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -104,58 +119,86 @@ export function IngredientFields({ ingredients, onChange, onAdd, onRemove }: Pro
 
       {ingredients.length > 0 && (
         <ul className="flex flex-col gap-3.5">
-          {ingredients.map((draft, index) => (
-            // **key は配列の添字にしない**（落とし穴 #N4）。途中の行を消すと値が後ろの行に残って見える
-            <li key={draft.key} className={CARD_CLASS}>
-              {/* 1段目: 材料名（伸びる・最小幅0）＋ 分量（幅96px・伸縮しない） */}
-              <div className="flex gap-2.5">
-                <input
-                  id={nameId(draft.key)}
-                  type="text"
-                  value={draft.name}
-                  onChange={(event) => onChange(draft.key, { name: event.target.value })}
-                  placeholder="材料名"
-                  aria-label={`材料名（${index + 1}行目）`}
-                  className={`${FIELD_CLASS} min-w-0 flex-1 text-lead`}
-                />
-                <input
-                  type="text"
-                  value={draft.amount}
-                  onChange={(event) => onChange(draft.key, { amount: event.target.value })}
-                  placeholder="分量"
-                  aria-label={`分量（${index + 1}行目）`}
-                  className={`${FIELD_CLASS} w-24 flex-none text-lead`}
-                />
-              </div>
+          {ingredients.map((draft, index) => {
+            const nameFieldId = nameId(draft.key);
+            const amountFieldId = ingredientAmountId(fieldPrefix, draft.key);
+            const nameProblem = errors[draft.key]?.name ?? null;
+            const amountProblem = errors[draft.key]?.amount ?? null;
 
-              {/* 2段目: カテゴリ（伸びる）＋ 削除（幅96px・危険スタイル） */}
-              <div className="flex gap-2.5">
-                <select
-                  value={draft.category}
-                  onChange={(event) =>
-                    onChange(draft.key, { category: event.target.value as Category })
-                  }
-                  aria-label={`カテゴリ（${index + 1}行目）`}
-                  className={`${FIELD_CLASS} min-w-0 flex-1 text-body`}
-                >
-                  {/* 並びとラベルは S-04 のタブと共有（lib/recipes/category.ts。落とし穴 #N12） */}
-                  {CATEGORY_ORDER.map((value) => (
-                    <option key={value} value={value}>
-                      {CATEGORY_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => requestRemove(draft)}
-                  aria-label={`${index + 1}行目を削除`}
-                  className={DANGER_SMALL_CLASS}
-                >
-                  削除
-                </button>
-              </div>
-            </li>
-          ))}
+            return (
+              // **key は配列の添字にしない**（落とし穴 #N4）。途中の行を消すと後ろの行が別の要素に
+              // 描き直され、フォーカスや変換中の文字が別の行へ移る
+              <li key={draft.key} className={CARD_CLASS}>
+                {/* 1段目: 材料名（伸びる・最小幅0）＋ 分量（幅96px・伸縮しない） */}
+                <div className="flex gap-2.5">
+                  <input
+                    id={nameFieldId}
+                    type="text"
+                    value={draft.name}
+                    onChange={(event) => onChange(draft.key, { name: event.target.value })}
+                    placeholder="材料名"
+                    aria-label={`材料名（${index + 1}行目）`}
+                    aria-invalid={nameProblem !== null}
+                    aria-describedby={nameProblem === null ? undefined : errorId(nameFieldId)}
+                    className={`${fieldClass(nameProblem !== null)} min-w-0 flex-1 text-lead`}
+                  />
+                  <input
+                    id={amountFieldId}
+                    type="text"
+                    value={draft.amount}
+                    onChange={(event) => onChange(draft.key, { amount: event.target.value })}
+                    placeholder="分量"
+                    aria-label={`分量（${index + 1}行目）`}
+                    aria-invalid={amountProblem !== null}
+                    aria-describedby={amountProblem === null ? undefined : errorId(amountFieldId)}
+                    className={`${fieldClass(amountProblem !== null)} w-24 flex-none text-lead`}
+                  />
+                </div>
+
+                {/*
+                 * 欄の下の補助文（README「フォーム入力」: 15px 赤。「未入力」）。
+                 * **見えるラベルが無い**（モックどおり）ので、どの欄の話かを頭に付ける（「材料名：未入力」）
+                 */}
+                {nameProblem !== null && (
+                  <p id={errorId(nameFieldId)} className={FIELD_ERROR_CLASS}>
+                    材料名：{nameProblem}
+                  </p>
+                )}
+                {amountProblem !== null && (
+                  <p id={errorId(amountFieldId)} className={FIELD_ERROR_CLASS}>
+                    分量：{amountProblem}
+                  </p>
+                )}
+
+                {/* 2段目: カテゴリ（伸びる）＋ 削除（幅96px・危険スタイル） */}
+                <div className="flex gap-2.5">
+                  <select
+                    value={draft.category}
+                    onChange={(event) =>
+                      onChange(draft.key, { category: event.target.value as Category })
+                    }
+                    aria-label={`カテゴリ（${index + 1}行目）`}
+                    className={`${fieldClass(false)} min-w-0 flex-1 text-body`}
+                  >
+                    {/* 並びとラベルは S-04 のタブと共有（lib/recipes/category.ts。落とし穴 #N12） */}
+                    {CATEGORY_ORDER.map((value) => (
+                      <option key={value} value={value}>
+                        {CATEGORY_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => requestRemove(draft)}
+                    aria-label={`${index + 1}行目を削除`}
+                    className={DANGER_SMALL_CLASS}
+                  >
+                    削除
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 

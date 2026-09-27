@@ -9,9 +9,11 @@ import {
   ADD_BUTTON_CLASS,
   CARD_CLASS,
   DANGER_SMALL_CLASS,
-  FIELD_CLASS,
+  FIELD_ERROR_CLASS,
   SECTION_HEADING_CLASS,
+  fieldClass,
 } from "./field-styles";
+import { errorId, stepTextId } from "./field-ids";
 
 /**
  * S-05「作り方」の節（決定① / recipe-edit design.md 6.2）。
@@ -26,18 +28,31 @@ import {
  * 作りは `ingredient-fields.tsx` と揃えてある。**下書きの state は持たない**。
  */
 
+/** 手順ごとの本文のエラー（`null` なら問題なし）。**保存を押すまでは渡さない**（design.md 5.5） */
+export type StepErrors = Record<string, string | null>;
+
 type Props = {
+  /** 欄の id の頭。`RecipeEditor` の `useId()`（保存時にフォーカスを移すのに使う。field-ids.ts） */
+  idPrefix: string;
   steps: StepDraft[];
+  errors: StepErrors;
   onChange: (key: string, text: string) => void;
   /** 末尾に空の手順を足し、その `key` を返す（フォーカスを移すのに使う） */
   onAdd: () => string;
   onRemove: (key: string) => void;
 };
 
-export function StepFields({ steps, onChange, onAdd, onRemove }: Props) {
+export function StepFields({
+  idPrefix: fieldPrefix,
+  steps,
+  errors,
+  onChange,
+  onAdd,
+  onRemove,
+}: Props) {
   const idPrefix = useId();
   const headingId = `${idPrefix}-heading`;
-  const textId = (key: string) => `${idPrefix}-text-${key}`;
+  const textId = (key: string) => stepTextId(fieldPrefix, key);
 
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -95,6 +110,7 @@ export function StepFields({ steps, onChange, onAdd, onRemove }: Props) {
         <ol className="flex flex-col gap-3.5">
           {steps.map((step, index) => {
             const number = index + 1;
+            const problem = errors[step.key] ?? null;
 
             return (
               // **key は配列の添字にしない**（落とし穴 #N4）
@@ -115,9 +131,17 @@ export function StepFields({ steps, onChange, onAdd, onRemove }: Props) {
                     id={textId(step.key)}
                     value={step.text}
                     number={number}
+                    problem={problem}
                     onChange={(text) => onChange(step.key, text)}
                   />
                 </div>
+
+                {/* 欄の下の補助文（README「フォーム入力」: 15px 赤）。番号の丸の幅だけ字下げして本文の欄に揃える */}
+                {problem !== null && (
+                  <p id={errorId(textId(step.key))} className={`${FIELD_ERROR_CLASS} pl-14`}>
+                    本文：{problem}
+                  </p>
+                )}
 
                 {/* 2段目: 右端に削除（行カードの「2段目の右端に削除」と揃える） */}
                 <div className="flex justify-end">
@@ -174,11 +198,13 @@ function StepText({
   id,
   value,
   number,
+  problem,
   onChange,
 }: {
   id: string;
   value: string;
   number: number;
+  problem: string | null;
   onChange: (text: string) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -222,7 +248,9 @@ function StepText({
       rows={3}
       placeholder="手順"
       aria-label={`手順${number}の本文`}
-      className={`${FIELD_CLASS} min-w-0 flex-1 resize-none overflow-hidden text-lead leading-[1.9]`}
+      aria-invalid={problem !== null}
+      aria-describedby={problem === null ? undefined : errorId(id)}
+      className={`${fieldClass(problem !== null)} min-w-0 flex-1 resize-none overflow-hidden text-lead leading-[1.9]`}
     />
   );
 }
