@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import type { RecipeViewMode } from "./mode";
+import { editPath, type RecipeViewMode } from "./mode";
 import { RecipeTitle } from "./recipe-title";
 
 /**
@@ -13,14 +13,14 @@ import { RecipeTitle } from "./recipe-title";
  *
  * | 段   | 中身                       | 状態                                                     |
  * | ---- | -------------------------- | -------------------------------------------------------- |
- * | 上段 | `← 一覧` / ~~`編集`~~      | **`← 一覧` のみ。** `編集` は S-05 が Phase 5 のため未実装 |
+ * | 上段 | `← 一覧` / `編集`          | `← 一覧` は Phase 4、`編集` は Phase 5（recipe-edit 決定②） |
  * | 中段 | タイトル ＋ `✎ 改題`       | Phase 3                                                  |
  * | 下段 | `材料 ↓` `作り方 ↓`        | Phase 3                                                  |
  *
  * **⚠️ 確認モードでは上段を出さない**（`UI_DESIGN.md` S-04c の差3）。確認モードは2段のまま。
  *
- * **Phase 5 で `編集` を戻すときは、上段を `justify-between` にして右端に置く**
- * （recipe-view design.md 6.1 の表: 左 `← 一覧` / 右 `編集`）。
+ * **Phase 5 で `編集` を戻した。** 上段は両端揃えで、左 `← 一覧` / 右 `編集`
+ * （recipe-view design.md 6.1 の表）。**確認モードは上段を出さないまま**（決定②。出口は最下部バーだけ）。
  */
 
 type Section = "ingredients" | "steps";
@@ -145,20 +145,36 @@ export function RecipeHeader({ recipeId, title: initialTitle, mode }: Props) {
          *
          * - **`← 一覧` は「移動」**（面なし・枠なし・`--color-link` ＋ 方向記号）。
          *   4種類目の見た目を足さない（recipe-view design.md 6.2 の中核ルール）
-         * - **右の `編集` は出さない。** 遷移先の S-05 は Phase 5（決着2）。
-         *   **1つしか無いので段ごと消さない** — `← 一覧` があれば段は成立する
-         * - **⚠️ 確認モードでは出さない**（`UI_DESIGN.md` S-04c の差3）。
-         *   デザインHTMLのモックには描かれているが README が正。**空の段として高さも残さない**
+         * - **右の `編集` は「操作」**（枠線ボタン）。Phase 5 で戻した（recipe-edit 決定②）
+         * - **⚠️ 確認モードでは上段ごと出さない**（`UI_DESIGN.md` S-04c の差3 / recipe-edit 決定②）。
+         *   デザインHTMLのモックには `← 一覧` と `編集` の両方が描かれているが採らない。
+         *   確認モードの出口は最下部バーの「この内容で決定」「編集する」だけ。**空の段として高さも残さない**
          */}
         {mode === "view" && (
-          <nav aria-label="画面の移動" className="flex px-3 py-1.5">
+          // **両端揃え**（左 `← 一覧` / 右 `編集`。recipe-view design.md 6.1 の表 / recipe-edit 決定②）
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <nav aria-label="画面の移動">
+              <Link
+                href="/"
+                className="text-link flex h-[var(--size-tap)] items-center px-3 text-body transition-colors duration-[120ms]"
+              >
+                ← 一覧
+              </Link>
+            </nav>
+
+            {/*
+             * `編集`（Phase 5 で戻した。recipe-edit 決定②）。**見た目は「操作」**
+             * （枠線 1.5px link・角丸8px・面は白・48px。README の中核ルールの表が `編集` を「操作」の例に挙げている）。
+             * 押すと別の画面へ移るだけなので要素は `Link`（中クリック・長押しで新しいタブも効く。design.md 5.9）。
+             * **「画面の移動」の nav には入れない。** 見た目の分類は「操作」で、`← 一覧` と同じ種類ではない
+             */}
             <Link
-              href="/"
-              className="text-link flex h-[var(--size-tap)] items-center px-3 text-body transition-colors duration-[120ms]"
+              href={editPath(recipeId)}
+              className="border-link text-link hover:bg-primary-soft bg-surface flex h-[var(--size-tap)] items-center rounded-sm border-[1.5px] px-4 text-body font-medium transition-colors duration-[120ms]"
             >
-              ← 一覧
+              編集
             </Link>
-          </nav>
+          </div>
         )}
 
         {/*
